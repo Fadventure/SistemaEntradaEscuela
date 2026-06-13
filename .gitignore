@@ -1,0 +1,35 @@
+# Entorno virtual
+venv/
+venv_*/
+env/
+.env/
+
+# Archivos de Python compilados
+__pycache__/
+*.pyc
+*.pyo
+
+# Base de datos de embeddings
+*.pkl
+*.pickle
+
+# Imágenes de rostros (privacidad y tamaño)
+rostros/
+rostros/*.png
+rostros/*.jpg
+rostros/*.jpeg
+
+# Modelos descargados de DeepFace
+.deepface/
+*.h5
+*.hdf5
+*.weights
+
+# Archivos temporales
+temp_*.jpg
+temp_*.png
+captura_*.jpg
+
+# VS Code
+.vscode/
+*.code-workspace
