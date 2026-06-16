@@ -5,6 +5,9 @@ import pickle
 import time
 import os
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
 # Configuración
 UMBRAL = 0.50
 BASE_DATOS = "alumnos_db.pkl"
