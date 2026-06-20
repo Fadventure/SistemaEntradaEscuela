@@ -10,16 +10,16 @@ os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
 # Configuración
 UMBRAL = 0.50
-BASE_DATOS = "alumnos_db.pkl"
+import os
+BASE_DATOS = os.path.join("base_datos", "alumnos_db.pkl")
 TEMP_IMG = "temp_captura.jpg"
 
 # Silenciar advertencias de TensorFlow
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 def cargar_base_datos():
-    """Carga los embeddings de alumnos registrados"""
     if not os.path.exists(BASE_DATOS):
-        print(f"❌ Base de datos no encontrada. Ejecuta registrar_alumnos.py primero.")
+        print(f"❌ Base de datos no encontrada: {BASE_DATOS}")
         return None
     with open(BASE_DATOS, 'rb') as f:
         return pickle.load(f)

@@ -1,24 +1,29 @@
 # gui_camara.py - Sistema de Reconocimiento Facial con Interfaz Gráfica
-# Versión 2.2 - Con verificación de cámara y detección de rostros
+# Versión 2.3 - Con db_manager centralizado
 
 import os
+import sys
 import cv2
-import pickle
 import time
 import datetime
 import tkinter as tk
 from tkinter import ttk, scrolledtext
 from PIL import Image, ImageTk
-import sys
-import numpy as np  # <--- NUEVA IMPORTACIÓN
+import numpy as np
+
+# ============================================
+# CONFIGURACIÓN DE RUTAS
+# ============================================
+
+# Obtener la raíz del proyecto (un nivel arriba de sistema_principal/)
+RAIZ_PROYECTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, RAIZ_PROYECTO)
 
 # ============================================
 # CONFIGURACIÓN
 # ============================================
 
 UMBRAL = 0.50
-BASE_DATOS = "alumnos_db.pkl"
-REGISTRO_INGRESOS = "registro_ingresos.txt"
 TEMP_IMG = "temp_captura.jpg"
 
 # Silenciar advertencias de TensorFlow
@@ -26,6 +31,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
 from deepface import DeepFace
+from base_datos.db_manager import cargar_db, registrar_ingreso
 
 # ============================================
 # CLASE PRINCIPAL DE LA GUI
@@ -44,7 +50,7 @@ class SistemaReconocimientoGUI:
         self.ultimo_alumno = ""
         self.ultima_distancia = 0.0
         self.base_datos = None
-        self.frame_actual = None  # Guardar el último frame válido
+        self.frame_actual = None
         
         # Colores
         self.color_verde = "#27ae60"
@@ -172,6 +178,20 @@ class SistemaReconocimientoGUI:
         self.texto_registro.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         self.texto_registro.config(state=tk.DISABLED)
         
+        # Botón para recargar base de datos
+        btn_recargar = tk.Button(
+            frame_info,
+            text="🔄 Recargar Alumnos",
+            command=self.recargar_base_datos,
+            font=("Arial", 9),
+            bg="#3498db",
+            fg="white",
+            padx=10,
+            pady=5,
+            cursor="hand2"
+        )
+        btn_recargar.pack(pady=5)
+        
         # === FRAME INFERIOR: Controles ===
         frame_controles = tk.Frame(self.root, bg=self.color_fondo)
         frame_controles.pack(fill=tk.X, padx=10, pady=10)
@@ -250,20 +270,27 @@ class SistemaReconocimientoGUI:
     # ============================================
     
     def cargar_base_datos(self):
-        """Carga la base de datos de alumnos"""
+        """Carga la base de datos usando db_manager"""
         try:
-            if os.path.exists(BASE_DATOS):
-                with open(BASE_DATOS, 'rb') as f:
-                    self.base_datos = pickle.load(f)
+            self.base_datos = cargar_db()
+            if self.base_datos:
                 print(f"✅ Base de datos cargada: {len(self.base_datos)} alumnos")
                 self.agregar_registro(f"✅ Sistema iniciado. {len(self.base_datos)} alumnos registrados.")
             else:
-                self.base_datos = None
-                print("⚠️ No se encontró base de datos")
-                self.agregar_registro("⚠️ No se encontró base de datos. Ejecuta registrar_alumnos.py")
+                self.base_datos = {}
+                self.agregar_registro("⚠️ No se encontró base de datos. Ejecuta modulo_admin/registrar_alumnos.py")
         except Exception as e:
             print(f"❌ Error al cargar base de datos: {e}")
-            self.base_datos = None
+            self.base_datos = {}
+            self.agregar_registro(f"❌ Error al cargar base de datos: {e}")
+    
+    def recargar_base_datos(self):
+        """Recarga la base de datos (útil después de agregar alumnos)"""
+        self.agregar_registro("🔄 Recargando base de datos...")
+        self.cargar_base_datos()
+        if self.base_datos:
+            self.agregar_registro(f"✅ Base de datos recargada. {len(self.base_datos)} alumnos.")
+        self.mostrar_estado()
     
     def iniciar_camara(self):
         """Inicia la cámara"""
@@ -286,11 +313,8 @@ class SistemaReconocimientoGUI:
             ret, frame = self.cap.read()
             if not ret or frame is None:
                 return False
-            
-            # Verificar que el frame no sea completamente negro
             if np.mean(frame) < 5:
                 return False
-            
             return True
         except:
             return False
@@ -301,55 +325,50 @@ class SistemaReconocimientoGUI:
             try:
                 ret, frame = self.cap.read()
                 if ret and frame is not None:
-                    # Guardar frame actual para uso posterior
                     self.frame_actual = frame.copy()
-                    
-                    # Redimensionar para mostrar
                     frame_display = cv2.resize(frame, (640, 480))
                     frame_rgb = cv2.cvtColor(frame_display, cv2.COLOR_BGR2RGB)
-                    
-                    # Convertir a imagen de Tkinter
                     img = Image.fromarray(frame_rgb)
                     img_tk = ImageTk.PhotoImage(image=img)
-                    
                     self.label_video.config(image=img_tk)
                     self.label_video.image = img_tk
                     
-                    # Si la cámara estaba con error, restaurar estado
                     if self.label_sistema.cget('text') == "⚠️ Sin imagen":
                         self.label_sistema.config(text="🟢 Sistema activo", fg=self.color_verde)
-            except Exception as e:
+            except Exception:
                 pass
         
-        # Programar siguiente actualización
         self.root.after(30, self.actualizar_video)
     
     def actualizar_reloj(self):
-        """Actualiza el reloj en la ventana"""
         ahora = datetime.datetime.now().strftime("%H:%M:%S")
         self.root.title(f"🎓 Sistema de Reconocimiento Facial - Escuela ({ahora})")
         self.root.after(1000, self.actualizar_reloj)
     
     def detectar_rostro(self, frame):
-        """Detecta si hay un rostro en la imagen usando OpenCV"""
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         caras = self.face_cascade.detectMultiScale(
-            gray,
-            scaleFactor=1.1,
-            minNeighbors=5,
+            gray, 
+            scaleFactor=1.1, 
+            minNeighbors=5, 
             minSize=(60, 60)
         )
         return len(caras) > 0, caras
     
     def capturar_rostro(self):
-        """Captura y reconoce el rostro (con verificación completa)"""
-        if not self.running or self.cap is None or self.base_datos is None:
+        """Captura y reconoce el rostro usando db_manager"""
+        if not self.running or self.cap is None:
             self.agregar_registro("⚠️ Sistema no listo para capturar")
             return
         
-        # --- VERIFICAR CÁMARA ---
+        if self.base_datos is None or len(self.base_datos) == 0:
+            self.agregar_registro("⚠️ No hay alumnos registrados en la base de datos")
+            self.label_nombre.config(text="SIN ALUMNOS", fg=self.color_rojo)
+            self.label_estado.config(text="⚠️ Base de datos vacía", fg=self.color_rojo)
+            return
+        
         if not self.verificar_camara_activa():
-            self.agregar_registro("⚠️ Cámara sin imagen (negra o desconectada)")
+            self.agregar_registro("⚠️ Cámara sin imagen")
             self.label_nombre.config(text="ERROR CÁMARA", fg=self.color_rojo)
             self.label_distancia.config(text="---")
             self.label_estado.config(text="❌ Cámara no disponible", fg=self.color_rojo)
@@ -360,35 +379,27 @@ class SistemaReconocimientoGUI:
         self.label_estado.config(text="🔍 Reconociendo...", fg="#f39c12")
         
         try:
-            # Capturar frame
             ret, frame = self.cap.read()
             if not ret or frame is None:
                 self.agregar_registro("❌ Error al capturar imagen")
                 return
             
-            # --- DETECTAR ROSTRO ---
             hay_rostro, caras = self.detectar_rostro(frame)
-            
             if not hay_rostro:
-                self.agregar_registro("⚠️ No se detectó ningún rostro en la imagen")
+                self.agregar_registro("⚠️ No se detectó ningún rostro")
                 self.label_nombre.config(text="NO HAY ROSTRO", fg=self.color_rojo)
                 self.label_distancia.config(text="---")
                 self.label_estado.config(text="⚠️ Sin rostro detectado", fg=self.color_rojo)
                 self.label_sistema.config(text="⚠️ Sin rostro", fg=self.color_rojo)
                 return
             
-            # Si hay rostro, continuar
             self.agregar_registro(f"✅ Rostro detectado ({len(caras)} cara(s))")
-            
-            # Guardar temporal
             cv2.imwrite(TEMP_IMG, frame)
             
-            # --- RECONOCER ROSTRO ---
             inicio = time.time()
             mejor_alumno, mejor_distancia = self.reconocer_rostro(TEMP_IMG)
             fin = time.time()
             
-            # --- MOSTRAR RESULTADO ---
             if mejor_alumno and mejor_distancia < UMBRAL:
                 self.ultimo_alumno = mejor_alumno
                 self.ultima_distancia = mejor_distancia
@@ -398,34 +409,36 @@ class SistemaReconocimientoGUI:
                 self.label_estado.config(text="✅ ACCESO CONCEDIDO", fg=self.color_verde)
                 self.label_sistema.config(text="✅ Acceso concedido", fg=self.color_verde)
                 
-                self.registrar_ingreso(mejor_alumno, "CONCEDIDO")
+                registrar_ingreso(mejor_alumno, "CONCEDIDO")
                 self.agregar_registro(f"✅ {mejor_alumno} - ACCESO CONCEDIDO (dist: {mejor_distancia:.4f})")
                 print(f"\n✅ {mejor_alumno} - ACCESO CONCEDIDO (dist: {mejor_distancia:.4f})")
                 
             else:
                 self.label_nombre.config(text="ACCESO DENEGADO", fg=self.color_rojo)
-                self.label_distancia.config(text=f"Distancia: {mejor_distancia:.4f}" if mejor_alumno else "No detectado")
+                self.label_distancia.config(
+                    text=f"Distancia: {mejor_distancia:.4f}" if mejor_alumno else "No detectado"
+                )
                 self.label_estado.config(text="❌ ACCESO DENEGADO", fg=self.color_rojo)
                 self.label_sistema.config(text="❌ Acceso denegado", fg=self.color_rojo)
                 
-                self.registrar_ingreso(
-                    mejor_alumno if mejor_alumno else "DESCONOCIDO", 
-                    "DENEGADO"
-                )
-                self.agregar_registro(f"❌ {mejor_alumno if mejor_alumno else 'DESCONOCIDO'} - ACCESO DENEGADO")
-                print(f"\n❌ {mejor_alumno if mejor_alumno else 'DESCONOCIDO'} - ACCESO DENEGADO")
+                nombre = mejor_alumno if mejor_alumno else "DESCONOCIDO"
+                registrar_ingreso(nombre, "DENEGADO")
+                self.agregar_registro(f"❌ {nombre} - ACCESO DENEGADO")
+                print(f"\n❌ {nombre} - ACCESO DENEGADO")
             
-            # Limpiar archivo temporal
             if os.path.exists(TEMP_IMG):
                 os.remove(TEMP_IMG)
                 
         except Exception as e:
             self.agregar_registro(f"❌ Error: {e}")
             print(f"❌ Error: {e}")
-            self.label_estado.config(text=f"❌ Error", fg=self.color_rojo)
+            self.label_estado.config(text="❌ Error", fg=self.color_rojo)
     
     def reconocer_rostro(self, ruta_imagen):
         """Reconoce un rostro comparando con la base de datos"""
+        if not self.base_datos:
+            return None, float('inf')
+        
         mejor_alumno = None
         mejor_distancia = float('inf')
         
@@ -448,15 +461,6 @@ class SistemaReconocimientoGUI:
                 continue
         
         return mejor_alumno, mejor_distancia
-    
-    def registrar_ingreso(self, alumno, estado):
-        """Registra el ingreso en el archivo de texto"""
-        try:
-            with open(REGISTRO_INGRESOS, "a", encoding="utf-8") as f:
-                timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                f.write(f"{timestamp} - {alumno} - {estado}\n")
-        except Exception as e:
-            print(f"⚠️ Error al registrar: {e}")
     
     def agregar_registro(self, mensaje):
         """Agrega un mensaje al registro visual"""
@@ -489,6 +493,7 @@ class SistemaReconocimientoGUI:
         self.label_sistema.config(text="🟢 Sistema activo", fg=self.color_verde)
         self.ultimo_alumno = ""
         self.ultima_distancia = 0.0
+        self.cargar_base_datos()
     
     def salir(self):
         """Cierra el sistema correctamente"""
@@ -508,24 +513,20 @@ class SistemaReconocimientoGUI:
 # ============================================
 
 if __name__ == "__main__":
-    # Verificar dependencias
     try:
         from PIL import Image, ImageTk
     except ImportError:
         print("❌ Necesitas instalar Pillow: pip install Pillow")
         sys.exit(1)
     
-    # Crear ventana
     root = tk.Tk()
     app = SistemaReconocimientoGUI(root)
     
-    # Manejar cierre
     def on_closing():
         app.salir()
     
     root.protocol("WM_DELETE_WINDOW", on_closing)
     
-    # Iniciar aplicación
     try:
         root.mainloop()
     except KeyboardInterrupt:
