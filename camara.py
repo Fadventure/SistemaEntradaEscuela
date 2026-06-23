@@ -68,7 +68,7 @@ def main():
     print("-" * 50)
     
     # Iniciar cámara
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
     
     if not cap.isOpened():
         print("❌ Error: No se pudo acceder a la cámara")

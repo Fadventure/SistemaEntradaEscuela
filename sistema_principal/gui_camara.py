@@ -1,5 +1,5 @@
 # gui_camara.py - Sistema de Reconocimiento Facial con Interfaz Gráfica
-# Versión 2.3 - Con db_manager centralizado
+# Versión 2.4 - Con selección de cámara configurable
 
 import os
 import sys
@@ -10,6 +10,17 @@ import tkinter as tk
 from tkinter import ttk, scrolledtext
 from PIL import Image, ImageTk
 import numpy as np
+
+# ============================================
+# CONFIGURACIÓN DE CÁMARA
+# ============================================
+
+# 0 = Cámara integrada (default)
+# 1 = Primera cámara USB externa
+# 2 = Segunda cámara USB externa
+# Si no sabes cuál usar, prueba con 0, luego 1, luego 2
+CAMARA_INDICE = 1  # <--- CAMBIA ESTE VALOR SEGÚN LA CÁMARA QUE QUIERAS USAR
+#Para poner otras camaras, poner un 1 o un 2 en el USB
 
 # ============================================
 # CONFIGURACIÓN DE RUTAS
@@ -293,16 +304,18 @@ class SistemaReconocimientoGUI:
         self.mostrar_estado()
     
     def iniciar_camara(self):
-        """Inicia la cámara"""
+        """Inicia la cámara usando el índice configurado"""
         try:
-            self.cap = cv2.VideoCapture(0)
+            # Usar la variable CAMARA_INDICE definida al inicio
+            self.cap = cv2.VideoCapture(CAMARA_INDICE)
             if not self.cap.isOpened():
-                raise Exception("No se pudo acceder a la cámara")
+                raise Exception(f"No se pudo acceder a la cámara {CAMARA_INDICE}")
             self.running = True
-            self.agregar_registro("📹 Cámara iniciada correctamente")
+            self.agregar_registro(f"📹 Cámara {CAMARA_INDICE} iniciada correctamente")
         except Exception as e:
             self.agregar_registro(f"❌ Error con cámara: {e}")
-            self.label_video.config(text="❌ No se pudo acceder a la cámara")
+            self.label_video.config(text=f"❌ No se pudo acceder a la cámara {CAMARA_INDICE}")
+            self.label_sistema.config(text="❌ Cámara no disponible", fg=self.color_rojo)
     
     def verificar_camara_activa(self):
         """Verifica que la cámara esté enviando imagen válida"""
@@ -477,7 +490,7 @@ class SistemaReconocimientoGUI:
 
 📁 Base de datos: {'✅ Cargada' if self.base_datos else '❌ No disponible'}
 👥 Alumnos registrados: {len(self.base_datos) if self.base_datos else 0}
-📹 Cámara: {'✅ Activa' if self.running else '❌ Inactiva'}
+📹 Cámara: {'✅ Activa (índice ' + str(CAMARA_INDICE) + ')' if self.running else '❌ Inactiva'}
 📏 Umbral: {UMBRAL}
 👤 Último reconocido: {self.ultimo_alumno if self.ultimo_alumno else 'Ninguno'}
 📐 Última distancia: {self.ultima_distancia:.4f if self.ultima_distancia else '---'}
@@ -518,6 +531,13 @@ if __name__ == "__main__":
     except ImportError:
         print("❌ Necesitas instalar Pillow: pip install Pillow")
         sys.exit(1)
+    
+    print("=" * 50)
+    print("📸 SELECCIÓN DE CÁMARA")
+    print(f"   Índice configurado: {CAMARA_INDICE}")
+    print("   Si no ves imagen, cambia CAMARA_INDICE en el archivo")
+    print("   0 = Cámara integrada, 1 = USB externa, 2 = Segunda USB")
+    print("=" * 50)
     
     root = tk.Tk()
     app = SistemaReconocimientoGUI(root)
