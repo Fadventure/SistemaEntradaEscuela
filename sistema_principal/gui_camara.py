@@ -19,7 +19,7 @@ import numpy as np
 # 1 = Primera cámara USB externa
 # 2 = Segunda cámara USB externa
 # Si no sabes cuál usar, prueba con 0, luego 1, luego 2
-CAMARA_INDICE = 1  # <--- CAMBIA ESTE VALOR SEGÚN LA CÁMARA QUE QUIERAS USAR
+CAMARA_INDICE = 0  # <--- CAMBIA ESTE VALOR SEGÚN LA CÁMARA QUE QUIERAS USAR
 #Para poner otras camaras, poner un 1 o un 2 en el USB
 
 # ============================================
