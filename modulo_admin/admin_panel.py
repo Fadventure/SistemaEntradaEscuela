@@ -1,4 +1,6 @@
-# admin_panel.py - Panel de Administración para profesores
+# admin_panel.py - Panel de Administración
+# Versión 2.0 - Estilo Oscuro
+
 import sys
 import os
 import tkinter as tk
@@ -8,12 +10,31 @@ from tkinter import ttk, messagebox
 # CONFIGURACIÓN DE RUTAS
 # ============================================
 
-# Agregar la raíz del proyecto al path
 RAIZ_PROYECTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ_PROYECTO)
 
-# Ahora importar desde base_datos
 from base_datos.db_manager import cargar_db, guardar_db, listar_alumnos, eliminar_alumno
+
+# ============================================
+# COLORES - ESTILO OSCURO
+# ============================================
+
+COLORS = {
+    'fondo': '#0d1117',
+    'fondo_card': '#161b22',
+    'fondo_input': '#0d1117',
+    'borde': '#30363d',
+    'azul_oscuro': '#0a1628',
+    'azul_medio': '#1a3a6a',
+    'azul_claro': '#2d6da8',
+    'texto': '#e6edf3',
+    'texto_secundario': '#8b949e',
+    'texto_oscuro': '#0d1117',
+    'verde': '#2ea043',
+    'rojo': '#f85149',
+    'amarillo': '#d29922',
+    'azul_info': '#58a6ff',
+}
 
 # ============================================
 # CLASE PRINCIPAL
@@ -22,9 +43,10 @@ from base_datos.db_manager import cargar_db, guardar_db, listar_alumnos, elimina
 class PanelAdmin:
     def __init__(self, root):
         self.root = root
-        self.root.title("👨‍🏫 Panel de Administración - Alumnos")
-        self.root.geometry("600x450")
-        self.root.configure(bg='#f0f0f0')
+        self.root.title("👨‍🏫 Panel de Administración - E.E.S.T. N°2")
+        self.root.geometry("700x550")
+        self.root.configure(bg=COLORS['fondo'])
+        self.root.minsize(600, 400)
         
         # Variables
         self.base_datos = None
@@ -36,33 +58,65 @@ class PanelAdmin:
         self.actualizar_lista()
     
     def crear_widgets(self):
-        """Crea todos los elementos de la interfaz"""
+        """Crea todos los elementos con estilo oscuro"""
         
-        # Título
-        titulo = tk.Label(
-            self.root, 
-            text="📚 GESTIÓN DE ALUMNOS",
-            font=("Arial", 16, "bold"),
-            bg="#f0f0f0",
-            fg="#2c3e50"
-        )
-        titulo.pack(pady=10)
+        # ============================================
+        # BANNER SUPERIOR
+        # ============================================
+        banner = tk.Frame(self.root, bg=COLORS['azul_oscuro'], height=55)
+        banner.pack(fill=tk.X, pady=(0, 10))
+        banner.pack_propagate(False)
         
-        # Frame de botones
-        frame_botones = tk.Frame(self.root, bg="#f0f0f0")
-        frame_botones.pack(pady=10)
+        frame_banner = tk.Frame(banner, bg=COLORS['azul_oscuro'])
+        frame_banner.pack(expand=True)
         
-        # Botones
+        tk.Label(
+            frame_banner,
+            text="👨‍🏫 Panel de Administración",
+            font=("Segoe UI", 14, "bold"),
+            bg=COLORS['azul_oscuro'],
+            fg=COLORS['texto']
+        ).pack(side=tk.LEFT, padx=10)
+        
+        tk.Label(
+            frame_banner,
+            text="|",
+            font=("Segoe UI", 14),
+            bg=COLORS['azul_oscuro'],
+            fg=COLORS['azul_claro']
+        ).pack(side=tk.LEFT, padx=10)
+        
+        tk.Label(
+            frame_banner,
+            text="E.E.S.T. N°2 - Gestión de Alumnos",
+            font=("Segoe UI", 10),
+            bg=COLORS['azul_oscuro'],
+            fg=COLORS['texto_secundario']
+        ).pack(side=tk.LEFT)
+        
+        # ============================================
+        # FRAME PRINCIPAL
+        # ============================================
+        frame_principal = tk.Frame(self.root, bg=COLORS['fondo'])
+        frame_principal.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        
+        # ---- Botones ----
+        frame_botones = tk.Frame(frame_principal, bg=COLORS['fondo'])
+        frame_botones.pack(fill=tk.X, pady=10)
+        
         btn_registrar = tk.Button(
             frame_botones,
             text="➕ Registrar Alumno",
             command=self.registrar_alumno,
-            font=("Arial", 10),
-            bg="#27ae60",
-            fg="white",
+            font=("Segoe UI", 10, "bold"),
+            bg=COLORS['verde'],
+            fg=COLORS['texto_oscuro'],
+            activebackground="#3fb950",
+            activeforeground=COLORS['texto_oscuro'],
+            relief=tk.FLAT,
+            cursor="hand2",
             padx=15,
-            pady=8,
-            cursor="hand2"
+            pady=8
         )
         btn_registrar.pack(side=tk.LEFT, padx=5)
         
@@ -70,12 +124,15 @@ class PanelAdmin:
             frame_botones,
             text="🗑️ Eliminar Alumno",
             command=self.eliminar_alumno,
-            font=("Arial", 10),
-            bg="#e74c3c",
-            fg="white",
+            font=("Segoe UI", 10, "bold"),
+            bg=COLORS['rojo'],
+            fg=COLORS['texto'],
+            activebackground="#da3633",
+            activeforeground=COLORS['texto'],
+            relief=tk.FLAT,
+            cursor="hand2",
             padx=15,
-            pady=8,
-            cursor="hand2"
+            pady=8
         )
         btn_eliminar.pack(side=tk.LEFT, padx=5)
         
@@ -83,12 +140,15 @@ class PanelAdmin:
             frame_botones,
             text="🔄 Actualizar Lista",
             command=self.actualizar_lista,
-            font=("Arial", 10),
-            bg="#3498db",
-            fg="white",
+            font=("Segoe UI", 10, "bold"),
+            bg=COLORS['azul_medio'],
+            fg=COLORS['texto'],
+            activebackground=COLORS['azul_claro'],
+            activeforeground=COLORS['texto'],
+            relief=tk.FLAT,
+            cursor="hand2",
             padx=15,
-            pady=8,
-            cursor="hand2"
+            pady=8
         )
         btn_actualizar.pack(side=tk.LEFT, padx=5)
         
@@ -96,54 +156,61 @@ class PanelAdmin:
             frame_botones,
             text="❌ Salir",
             command=self.salir,
-            font=("Arial", 10),
-            bg="#95a5a6",
-            fg="white",
+            font=("Segoe UI", 10, "bold"),
+            bg=COLORS['rojo'],
+            fg=COLORS['texto'],
+            activebackground="#da3633",
+            activeforeground=COLORS['texto'],
+            relief=tk.FLAT,
+            cursor="hand2",
             padx=15,
-            pady=8,
-            cursor="hand2"
+            pady=8
         )
         btn_salir.pack(side=tk.RIGHT, padx=5)
         
-        # Lista de alumnos
+        # ---- Lista de alumnos ----
         tk.Label(
-            self.root,
+            frame_principal,
             text="📋 Alumnos Registrados:",
-            font=("Arial", 10, "bold"),
-            bg="#f0f0f0",
-            fg="#2c3e50"
-        ).pack(anchor=tk.W, padx=20, pady=(10, 5))
+            font=("Segoe UI", 10, "bold"),
+            bg=COLORS['fondo'],
+            fg=COLORS['texto_secundario']
+        ).pack(anchor=tk.W, pady=(10, 5))
         
-        # Frame para la lista con scroll
-        frame_lista = tk.Frame(self.root, bg="#f0f0f0")
-        frame_lista.pack(fill=tk.BOTH, expand=True, padx=20, pady=5)
+        frame_lista = tk.Frame(frame_principal, bg=COLORS['fondo'])
+        frame_lista.pack(fill=tk.BOTH, expand=True)
         
-        scrollbar = tk.Scrollbar(frame_lista)
+        scrollbar = tk.Scrollbar(frame_lista, bg=COLORS['fondo_card'])
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
         self.lista_alumnos = tk.Listbox(
             frame_lista,
             yscrollcommand=scrollbar.set,
             font=("Consolas", 10),
-            bg="#ffffff",
-            fg="#2c3e50",
-            selectmode=tk.SINGLE
+            bg=COLORS['fondo_input'],
+            fg=COLORS['texto'],
+            selectmode=tk.SINGLE,
+            relief=tk.FLAT,
+            bd=1,
+            highlightbackground=COLORS['borde'],
+            highlightcolor=COLORS['azul_claro'],
+            highlightthickness=1,
+            activestyle='none'
         )
         self.lista_alumnos.pack(fill=tk.BOTH, expand=True)
         scrollbar.config(command=self.lista_alumnos.yview)
         
-        # Estado
+        # ---- Estado ----
         self.label_estado = tk.Label(
-            self.root,
+            frame_principal,
             text="✅ Sistema listo",
-            font=("Arial", 9),
-            bg="#f0f0f0",
-            fg="#27ae60"
+            font=("Segoe UI", 9),
+            bg=COLORS['fondo'],
+            fg=COLORS['verde']
         )
         self.label_estado.pack(pady=10)
     
     def actualizar_lista(self):
-        """Actualiza la lista de alumnos desde la base de datos"""
         self.lista_alumnos.delete(0, tk.END)
         
         try:
@@ -151,47 +218,53 @@ class PanelAdmin:
             if alumnos:
                 for alumno in sorted(alumnos):
                     self.lista_alumnos.insert(tk.END, alumno)
-                self.label_estado.config(text=f"✅ {len(alumnos)} alumnos cargados", fg="#27ae60")
+                self.label_estado.config(
+                    text=f"✅ {len(alumnos)} alumnos cargados",
+                    fg=COLORS['verde']
+                )
             else:
                 self.lista_alumnos.insert(tk.END, "⚠️ No hay alumnos registrados")
-                self.label_estado.config(text="⚠️ Base de datos vacía", fg="#f39c12")
+                self.label_estado.config(
+                    text="⚠️ Base de datos vacía",
+                    fg=COLORS['amarillo']
+                )
         except Exception as e:
             self.lista_alumnos.insert(tk.END, f"❌ Error: {e}")
-            self.label_estado.config(text=f"❌ Error al cargar datos", fg="#e74c3c")
+            self.label_estado.config(
+                text=f"❌ Error al cargar datos",
+                fg=COLORS['rojo']
+            )
     
     def registrar_alumno(self):
-        """Abre el registro de un nuevo alumno"""
         import subprocess
-        import os
-        
-        # Ruta al script de registro
-        script_path = os.path.join("modulo_admin", "registrar_alumnos.py")
+        script_path = os.path.join("modulo_admin", "registro_alumno_gui.py")
         
         try:
-            # Abrir el script en una nueva terminal
             subprocess.Popen(
                 ["python", script_path],
                 creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0
             )
-            self.label_estado.config(text="📝 Registro abierto en nueva ventana", fg="#3498db")
+            self.label_estado.config(
+                text="📝 Registro abierto en nueva ventana",
+                fg=COLORS['azul_info']
+            )
         except Exception as e:
             messagebox.showerror(
                 "❌ Error",
                 f"No se pudo abrir el registro:\n{e}\n\n"
-                "Ejecuta manualmente: python modulo_admin/registrar_alumnos.py"
+                "Ejecuta manualmente: python modulo_admin/registro_alumno_gui.py"
             )
     
     def eliminar_alumno(self):
-        """Elimina el alumno seleccionado"""
         seleccionado = self.lista_alumnos.curselection()
         if not seleccionado:
-            messagebox.showwarning(
-                "⚠️ Seleccionar",
-                "Primero selecciona un alumno de la lista"
-            )
+            messagebox.showwarning("⚠️", "Primero selecciona un alumno de la lista")
             return
         
         alumno = self.lista_alumnos.get(seleccionado[0])
+        
+        if alumno.startswith(("⚠️", "❌")):
+            return
         
         if messagebox.askyesno(
             "🗑️ Confirmar Eliminación",
@@ -205,7 +278,10 @@ class PanelAdmin:
                         f"El alumno '{alumno}' fue eliminado correctamente"
                     )
                     self.actualizar_lista()
-                    self.label_estado.config(text=f"✅ Alumno '{alumno}' eliminado", fg="#27ae60")
+                    self.label_estado.config(
+                        text=f"✅ Alumno '{alumno}' eliminado",
+                        fg=COLORS['verde']
+                    )
                 else:
                     messagebox.showerror(
                         "❌ Error",
@@ -215,7 +291,6 @@ class PanelAdmin:
                 messagebox.showerror("❌ Error", f"Error al eliminar: {e}")
     
     def salir(self):
-        """Cierra el panel"""
         self.root.quit()
         self.root.destroy()
 

@@ -1,5 +1,5 @@
-# modulo_admin/registro_alumno_gui.py
-# Interfaz para que los maestros registren alumnos
+# registro_alumno_gui.py - Registro de Alumnos con Cámara
+# Versión 2.0 - Estilo Oscuro
 
 import os
 import sys
@@ -9,7 +9,10 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
 
-# Configurar rutas
+# ============================================
+# CONFIGURACIÓN DE RUTAS
+# ============================================
+
 RAIZ_PROYECTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ_PROYECTO)
 
@@ -23,15 +26,38 @@ from base_datos.db_manager import cargar_db, guardar_db
 CARPETA_ALUMNOS = "rostros/alumnos_registrados"
 
 # ============================================
+# COLORES - ESTILO OSCURO
+# ============================================
+
+COLORS = {
+    'fondo': '#0d1117',
+    'fondo_card': '#161b22',
+    'fondo_input': '#0d1117',
+    'borde': '#30363d',
+    'azul_oscuro': '#0a1628',
+    'azul_medio': '#1a3a6a',
+    'azul_claro': '#2d6da8',
+    'texto': '#e6edf3',
+    'texto_secundario': '#8b949e',
+    'texto_oscuro': '#0d1117',
+    'verde': '#2ea043',
+    'rojo': '#f85149',
+    'amarillo': '#d29922',
+    'azul_info': '#58a6ff',
+    'video_bg': '#000000',
+}
+
+# ============================================
 # CLASE PRINCIPAL
 # ============================================
 
 class RegistroAlumnoGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("📝 Registrar Alumno - Sistema de Reconocimiento")
-        self.root.geometry("700x550")
-        self.root.configure(bg='#f0f0f0')
+        self.root.title("📝 Registrar Alumno - E.E.S.T. N°2")
+        self.root.geometry("900x650")
+        self.root.configure(bg=COLORS['fondo'])
+        self.root.minsize(800, 550)
         
         # Variables
         self.cap = None
@@ -39,6 +65,11 @@ class RegistroAlumnoGUI:
         self.frame_actual = None
         self.foto_tomada = None
         self.ruta_foto = None
+        
+        # Configurar grid principal
+        self.root.grid_rowconfigure(0, weight=0)  # Banner
+        self.root.grid_rowconfigure(1, weight=1)  # Contenido
+        self.root.grid_columnconfigure(0, weight=1)
         
         # Crear widgets
         self.crear_widgets()
@@ -50,158 +81,265 @@ class RegistroAlumnoGUI:
         self.actualizar_video()
     
     def crear_widgets(self):
-        """Crea todos los elementos de la interfaz"""
+        """Crea todos los elementos con estilo oscuro"""
         
-        # Título
-        titulo = tk.Label(
-            self.root,
-            text="📝 REGISTRO DE NUEVO ALUMNO",
-            font=("Arial", 16, "bold"),
-            bg="#f0f0f0",
-            fg="#2c3e50"
-        )
-        titulo.pack(pady=10)
+        # ============================================
+        # BANNER SUPERIOR
+        # ============================================
+        banner = tk.Frame(self.root, bg=COLORS['azul_oscuro'], height=60)
+        banner.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        banner.grid_propagate(False)
         
-        # Frame principal (2 columnas)
-        frame_principal = tk.Frame(self.root, bg="#f0f0f0")
-        frame_principal.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        frame_banner = tk.Frame(banner, bg=COLORS['azul_oscuro'])
+        frame_banner.pack(expand=True)
+        
+        tk.Label(
+            frame_banner,
+            text="📝 Registrar Nuevo Alumno",
+            font=("Segoe UI", 16, "bold"),
+            bg=COLORS['azul_oscuro'],
+            fg=COLORS['texto']
+        ).pack(side=tk.LEFT, padx=10)
+        
+        tk.Label(
+            frame_banner,
+            text="|",
+            font=("Segoe UI", 14),
+            bg=COLORS['azul_oscuro'],
+            fg=COLORS['azul_claro']
+        ).pack(side=tk.LEFT, padx=10)
+        
+        tk.Label(
+            frame_banner,
+            text="E.E.S.T. N°2 - Ing. Emilio Rebuelto",
+            font=("Segoe UI", 10),
+            bg=COLORS['azul_oscuro'],
+            fg=COLORS['texto_secundario']
+        ).pack(side=tk.LEFT)
+        
+        # ============================================
+        # FRAME PRINCIPAL (2 columnas)
+        # ============================================
+        frame_principal = tk.Frame(self.root, bg=COLORS['fondo'])
+        frame_principal.grid(row=1, column=0, sticky="nsew", padx=10, pady=5)
+        frame_principal.grid_rowconfigure(0, weight=1)
+        frame_principal.grid_columnconfigure(0, weight=2)  # Video más grande
+        frame_principal.grid_columnconfigure(1, weight=1)  # Datos
         
         # ---- Columna Izquierda: Video ----
-        frame_video = tk.LabelFrame(
+        frame_video = tk.Frame(
             frame_principal,
-            text="📹 Capturar Foto",
-            font=("Arial", 10, "bold"),
-            bg="#f0f0f0"
+            bg=COLORS['fondo_card'],
+            bd=1,
+            relief=tk.FLAT
         )
-        frame_video.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+        frame_video.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        frame_video.grid_rowconfigure(1, weight=1)
+        frame_video.grid_columnconfigure(0, weight=1)
+        
+        tk.Label(
+            frame_video,
+            text="📹 Capturar Foto",
+            font=("Segoe UI", 11, "bold"),
+            bg=COLORS['fondo_card'],
+            fg=COLORS['texto'],
+            padx=10,
+            pady=5
+        ).grid(row=0, column=0, sticky="w")
         
         self.label_video = tk.Label(
             frame_video,
-            text="Esperando cámara...",
-            bg="#2c3e50",
-            fg="white",
-            font=("Arial", 12)
+            text="🔄 Iniciando cámara...",
+            bg=COLORS['video_bg'],
+            fg=COLORS['texto_secundario'],
+            font=("Segoe UI", 14)
         )
-        self.label_video.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
-        # Botón capturar
-        btn_capturar = tk.Button(
-            frame_video,
-            text="📸 Tomar Foto",
-            command=self.tomar_foto,
-            font=("Arial", 10, "bold"),
-            bg="#27ae60",
-            fg="white",
-            padx=20,
-            pady=8,
-            cursor="hand2"
-        )
-        btn_capturar.pack(pady=10)
+        self.label_video.grid(row=1, column=0, sticky="nsew", padx=8, pady=(0, 8))
         
         # ---- Columna Derecha: Datos ----
-        frame_datos = tk.LabelFrame(
+        frame_datos = tk.Frame(
             frame_principal,
-            text="📋 Datos del Alumno",
-            font=("Arial", 10, "bold"),
-            bg="#f0f0f0"
+            bg=COLORS['fondo_card'],
+            bd=1,
+            relief=tk.FLAT
         )
-        frame_datos.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(5, 0))
+        frame_datos.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
+        frame_datos.grid_rowconfigure(0, weight=0)
+        frame_datos.grid_rowconfigure(1, weight=0)
+        frame_datos.grid_rowconfigure(2, weight=0)
+        frame_datos.grid_rowconfigure(3, weight=0)
+        frame_datos.grid_rowconfigure(4, weight=0)
+        frame_datos.grid_rowconfigure(5, weight=1)  # Foto tomada (expande)
+        frame_datos.grid_rowconfigure(6, weight=0)
+        frame_datos.grid_columnconfigure(0, weight=1)
+        
+        # Título
+        tk.Label(
+            frame_datos,
+            text="📋 DATOS DEL ALUMNO",
+            font=("Segoe UI", 11, "bold"),
+            bg=COLORS['fondo_card'],
+            fg=COLORS['texto'],
+            padx=10,
+            pady=5
+        ).grid(row=0, column=0, sticky="w")
         
         # Nombre
         tk.Label(
             frame_datos,
             text="👤 Nombre:",
-            font=("Arial", 10),
-            bg="#f0f0f0"
-        ).pack(anchor=tk.W, padx=10, pady=(10, 2))
+            font=("Segoe UI", 10),
+            bg=COLORS['fondo_card'],
+            fg=COLORS['texto_secundario']
+        ).grid(row=1, column=0, sticky="w", padx=10, pady=(10, 2))
         
         self.entry_nombre = tk.Entry(
             frame_datos,
-            font=("Arial", 12),
-            width=25
+            font=("Segoe UI", 12),
+            bg=COLORS['fondo_input'],
+            fg=COLORS['texto'],
+            insertbackground=COLORS['texto'],
+            relief=tk.FLAT,
+            bd=1,
+            highlightbackground=COLORS['borde'],
+            highlightcolor=COLORS['azul_claro'],
+            highlightthickness=1
         )
-        self.entry_nombre.pack(padx=10, pady=5)
+        self.entry_nombre.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 5))
         
         # Curso
         tk.Label(
             frame_datos,
             text="📚 Curso:",
-            font=("Arial", 10),
-            bg="#f0f0f0"
-        ).pack(anchor=tk.W, padx=10, pady=(10, 2))
+            font=("Segoe UI", 10),
+            bg=COLORS['fondo_card'],
+            fg=COLORS['texto_secundario']
+        ).grid(row=3, column=0, sticky="w", padx=10, pady=(10, 2))
         
         self.entry_curso = tk.Entry(
             frame_datos,
-            font=("Arial", 12),
-            width=25
+            font=("Segoe UI", 12),
+            bg=COLORS['fondo_input'],
+            fg=COLORS['texto'],
+            insertbackground=COLORS['texto'],
+            relief=tk.FLAT,
+            bd=1,
+            highlightbackground=COLORS['borde'],
+            highlightcolor=COLORS['azul_claro'],
+            highlightthickness=1
         )
-        self.entry_curso.pack(padx=10, pady=5)
-        self.entry_curso.insert(0, "4°A")  # Valor por defecto
+        self.entry_curso.grid(row=4, column=0, sticky="ew", padx=10, pady=(0, 5))
+        self.entry_curso.insert(0, "4°A")
         
-        # Espacio
-        tk.Label(frame_datos, text="", bg="#f0f0f0").pack(pady=5)
-        
-        # Previsualización de la foto tomada
+        # Foto tomada (previsualización)
         tk.Label(
             frame_datos,
             text="📸 Foto tomada:",
-            font=("Arial", 10, "bold"),
-            bg="#f0f0f0"
-        ).pack(anchor=tk.W, padx=10)
+            font=("Segoe UI", 10, "bold"),
+            bg=COLORS['fondo_card'],
+            fg=COLORS['texto_secundario']
+        ).grid(row=5, column=0, sticky="w", padx=10, pady=(10, 2))
         
         self.label_foto_tomada = tk.Label(
             frame_datos,
             text="(Sin foto)",
-            bg="#ecf0f1",
-            width=30,
-            height=8,
-            relief=tk.SUNKEN
+            bg=COLORS['fondo_input'],
+            fg=COLORS['texto_secundario'],
+            font=("Segoe UI", 10),
+            relief=tk.FLAT,
+            bd=1,
+            highlightbackground=COLORS['borde'],
+            highlightthickness=1
         )
-        self.label_foto_tomada.pack(padx=10, pady=5)
+        self.label_foto_tomada.grid(row=5, column=0, sticky="nsew", padx=10, pady=(0, 5))
         
-        # Botón registrar
+        # Botones
+        frame_botones = tk.Frame(frame_datos, bg=COLORS['fondo_card'])
+        frame_botones.grid(row=6, column=0, sticky="ew", padx=10, pady=10)
+        
+        btn_capturar = tk.Button(
+            frame_botones,
+            text="📸 Tomar Foto",
+            command=self.tomar_foto,
+            font=("Segoe UI", 10, "bold"),
+            bg=COLORS['verde'],
+            fg=COLORS['texto_oscuro'],
+            activebackground="#3fb950",
+            activeforeground=COLORS['texto_oscuro'],
+            relief=tk.FLAT,
+            cursor="hand2",
+            padx=15,
+            pady=8
+        )
+        btn_capturar.pack(side=tk.LEFT, padx=5)
+        
         btn_registrar = tk.Button(
-            frame_datos,
+            frame_botones,
             text="💾 Registrar Alumno",
             command=self.registrar_alumno,
-            font=("Arial", 10, "bold"),
-            bg="#3498db",
-            fg="white",
-            padx=20,
-            pady=10,
-            cursor="hand2"
+            font=("Segoe UI", 10, "bold"),
+            bg=COLORS['azul_medio'],
+            fg=COLORS['texto'],
+            activebackground=COLORS['azul_claro'],
+            activeforeground=COLORS['texto'],
+            relief=tk.FLAT,
+            cursor="hand2",
+            padx=15,
+            pady=8
         )
-        btn_registrar.pack(pady=10)
+        btn_registrar.pack(side=tk.LEFT, padx=5)
+        
+        btn_salir = tk.Button(
+            frame_botones,
+            text="❌ Salir",
+            command=self.salir,
+            font=("Segoe UI", 10, "bold"),
+            bg=COLORS['rojo'],
+            fg=COLORS['texto'],
+            activebackground="#da3633",
+            activeforeground=COLORS['texto'],
+            relief=tk.FLAT,
+            cursor="hand2",
+            padx=15,
+            pady=8
+        )
+        btn_salir.pack(side=tk.RIGHT, padx=5)
         
         # Estado
         self.label_estado = tk.Label(
             frame_datos,
             text="✅ Listo para registrar",
-            font=("Arial", 9),
-            bg="#f0f0f0",
-            fg="#27ae60"
+            font=("Segoe UI", 9),
+            bg=COLORS['fondo_card'],
+            fg=COLORS['verde']
         )
-        self.label_estado.pack(pady=5)
+        self.label_estado.grid(row=7, column=0, sticky="w", padx=10, pady=(0, 5))
+    
+    # ============================================
+    # FUNCIONES DEL SISTEMA
+    # ============================================
     
     def iniciar_camara(self):
-        """Inicia la cámara"""
         try:
             self.cap = cv2.VideoCapture(0)
             if not self.cap.isOpened():
                 raise Exception("No se pudo acceder a la cámara")
             self.running = True
-            self.label_estado.config(text="✅ Cámara iniciada", fg="#27ae60")
+            self.label_estado.config(text="✅ Cámara iniciada", fg=COLORS['verde'])
         except Exception as e:
-            self.label_estado.config(text=f"❌ Error: {e}", fg="#e74c3c")
+            self.label_estado.config(text=f"❌ Error: {e}", fg=COLORS['rojo'])
     
     def actualizar_video(self):
-        """Actualiza el video en tiempo real"""
         if self.running and self.cap:
             try:
                 ret, frame = self.cap.read()
                 if ret and frame is not None:
                     self.frame_actual = frame.copy()
-                    frame_display = cv2.resize(frame, (400, 300))
+                    h, w = frame.shape[:2]
+                    aspect = w / h
+                    new_w = 500
+                    new_h = int(new_w / aspect)
+                    frame_display = cv2.resize(frame, (new_w, new_h))
                     frame_rgb = cv2.cvtColor(frame_display, cv2.COLOR_BGR2RGB)
                     img = Image.fromarray(frame_rgb)
                     img_tk = ImageTk.PhotoImage(image=img)
@@ -209,16 +347,13 @@ class RegistroAlumnoGUI:
                     self.label_video.image = img_tk
             except Exception:
                 pass
-        
         self.root.after(30, self.actualizar_video)
     
     def tomar_foto(self):
-        """Toma una foto de la cámara"""
         if self.frame_actual is None:
             messagebox.showwarning("⚠️", "No hay imagen de la cámara")
             return
         
-        # Guardar la foto
         self.foto_tomada = self.frame_actual.copy()
         
         # Mostrar en el label
@@ -229,14 +364,12 @@ class RegistroAlumnoGUI:
         self.label_foto_tomada.config(image=img_tk)
         self.label_foto_tomada.image = img_tk
         
-        self.label_estado.config(text="📸 Foto tomada, completa los datos", fg="#f39c12")
+        self.label_estado.config(text="📸 Foto tomada, completa los datos", fg=COLORS['amarillo'])
     
     def registrar_alumno(self):
-        """Registra al alumno en la base de datos"""
         nombre = self.entry_nombre.get().strip().lower()
         curso = self.entry_curso.get().strip()
         
-        # Validaciones
         if not nombre:
             messagebox.showwarning("⚠️", "Ingresa el nombre del alumno")
             return
@@ -250,16 +383,13 @@ class RegistroAlumnoGUI:
             return
         
         try:
-            # Guardar foto en la carpeta del alumno
             carpeta_alumno = os.path.join(CARPETA_ALUMNOS, nombre)
             os.makedirs(carpeta_alumno, exist_ok=True)
             
-            # Nombre del archivo: nombre_1.png
             ruta_foto = os.path.join(carpeta_alumno, f"{nombre}_1.png")
             cv2.imwrite(ruta_foto, self.foto_tomada)
             
-            # Generar embedding
-            self.label_estado.config(text="🔄 Generando embedding...", fg="#f39c12")
+            self.label_estado.config(text="🔄 Generando embedding...", fg=COLORS['amarillo'])
             self.root.update()
             
             embedding = DeepFace.represent(
@@ -268,9 +398,7 @@ class RegistroAlumnoGUI:
                 enforce_detection=False
             )[0]['embedding']
             
-            # Guardar en la base de datos
             db = cargar_db()
-            
             db[nombre] = {
                 'embedding': embedding,
                 'imagen_referencia': ruta_foto,
@@ -278,10 +406,8 @@ class RegistroAlumnoGUI:
                 'curso': curso,
                 'nombre_completo': nombre.title()
             }
-            
             guardar_db(db)
             
-            # Limpiar campos
             self.entry_nombre.delete(0, tk.END)
             self.foto_tomada = None
             self.label_foto_tomada.config(image='', text="(Sin foto)")
@@ -294,14 +420,13 @@ class RegistroAlumnoGUI:
                 f"Foto guardada en: {ruta_foto}"
             )
             
-            self.label_estado.config(text=f"✅ Alumno '{nombre.title()}' registrado", fg="#27ae60")
+            self.label_estado.config(text=f"✅ Alumno '{nombre.title()}' registrado", fg=COLORS['verde'])
             
         except Exception as e:
             messagebox.showerror("❌ Error", f"Error al registrar:\n{e}")
-            self.label_estado.config(text=f"❌ Error: {e}", fg="#e74c3c")
+            self.label_estado.config(text=f"❌ Error: {e}", fg=COLORS['rojo'])
     
     def salir(self):
-        """Cierra la aplicación"""
         self.running = False
         if self.cap:
             self.cap.release()

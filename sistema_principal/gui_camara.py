@@ -1,5 +1,5 @@
-# gui_camara.py - Sistema de Reconocimiento Facial con Interfaz Gráfica
-# Versión 2.4 - Con selección de cámara configurable
+# gui_camara.py - Sistema de Reconocimiento Facial
+# Versión 2.7 - Estilo Oscuro con Cámara Grande SIN EFECTO ESPEJO
 
 import os
 import sys
@@ -15,18 +15,12 @@ import numpy as np
 # CONFIGURACIÓN DE CÁMARA
 # ============================================
 
-# 0 = Cámara integrada (default)
-# 1 = Primera cámara USB externa
-# 2 = Segunda cámara USB externa
-# Si no sabes cuál usar, prueba con 0, luego 1, luego 2
-CAMARA_INDICE = 0  # <--- CAMBIA ESTE VALOR SEGÚN LA CÁMARA QUE QUIERAS USAR
-#Para poner otras camaras, poner un 1 o un 2 en el USB
+CAMARA_INDICE = 0  # 0 = integrada, 1 o 2 = USB externa
 
 # ============================================
 # CONFIGURACIÓN DE RUTAS
 # ============================================
 
-# Obtener la raíz del proyecto (un nivel arriba de sistema_principal/)
 RAIZ_PROYECTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ_PROYECTO)
 
@@ -45,15 +39,47 @@ from deepface import DeepFace
 from base_datos.db_manager import cargar_db, registrar_ingreso
 
 # ============================================
-# CLASE PRINCIPAL DE LA GUI
+# COLORES - ESTILO OSCURO
+# ============================================
+
+COLORS = {
+    # Fondo principal
+    'fondo': '#0d1117',          # Fondo general (oscuro)
+    'fondo_card': '#161b22',     # Fondo de tarjetas
+    'fondo_input': '#0d1117',    # Fondo de inputs
+    'borde': '#30363d',          # Bordes sutiles
+    
+    # Colores institucionales (adaptados a oscuro)
+    'azul_oscuro': '#0a1628',    # Banner superior
+    'azul_medio': '#1a3a6a',     # Botones principales
+    'azul_claro': '#2d6da8',     # Hover de botones
+    
+    # Textos
+    'texto': '#e6edf3',          # Texto principal (blanco)
+    'texto_secundario': '#8b949e', # Texto secundario (gris)
+    'texto_oscuro': '#0d1117',   # Texto sobre fondos claros
+    
+    # Estados
+    'verde': '#2ea043',          # Acceso concedido
+    'rojo': '#f85149',           # Acceso denegado
+    'amarillo': '#d29922',       # Advertencias
+    'azul_info': '#58a6ff',      # Información
+    
+    # Video
+    'video_bg': '#000000',       # Fondo del video (negro)
+}
+
+# ============================================
+# CLASE PRINCIPAL
 # ============================================
 
 class SistemaReconocimientoGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("🎓 Sistema de Reconocimiento Facial - Escuela")
-        self.root.geometry("900x600")
-        self.root.configure(bg='#f0f0f0')
+        self.root.title("E.E.S.T. N°2 - Sistema de Reconocimiento Facial")
+        self.root.geometry("1100x680")
+        self.root.configure(bg=COLORS['fondo'])
+        self.root.minsize(1000, 600)
         
         # Variables
         self.cap = None
@@ -63,12 +89,12 @@ class SistemaReconocimientoGUI:
         self.base_datos = None
         self.frame_actual = None
         
-        # Colores
-        self.color_verde = "#27ae60"
-        self.color_rojo = "#e74c3c"
-        self.color_fondo = "#f0f0f0"
+        # Configurar grid principal
+        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_columnconfigure(0, weight=3)  # Video más grande
+        self.root.grid_columnconfigure(1, weight=1)  # Panel derecho más pequeño
         
-        # Cargar clasificador de rostros de OpenCV
+        # Cargar clasificador de rostros
         self.face_cascade = cv2.CascadeClassifier(
             cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
         )
@@ -85,190 +111,290 @@ class SistemaReconocimientoGUI:
         # Actualizar ventana
         self.actualizar_video()
         self.actualizar_reloj()
-        
+    
     def crear_widgets(self):
-        """Crea todos los elementos de la interfaz"""
+        """Crea todos los elementos con estilo oscuro"""
         
-        # === TÍTULO ===
+        # ============================================
+        # BANNER SUPERIOR
+        # ============================================
+        banner = tk.Frame(self.root, bg=COLORS['azul_oscuro'], height=65)
+        banner.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 10))
+        banner.grid_propagate(False)
+        
+        # Contenido del banner (centrado)
+        frame_banner_content = tk.Frame(banner, bg=COLORS['azul_oscuro'])
+        frame_banner_content.pack(expand=True)
+        
+        # Título
         titulo = tk.Label(
-            self.root, 
-            text="🎓 SISTEMA DE RECONOCIMIENTO FACIAL",
-            font=("Arial", 18, "bold"),
-            bg=self.color_fondo,
-            fg="#2c3e50"
+            frame_banner_content,
+            text="E.E.S.T. N°2 - Sistema de Reconocimiento Facial",
+            font=("Segoe UI", 16, "bold"),
+            bg=COLORS['azul_oscuro'],
+            fg=COLORS['texto']
         )
-        titulo.pack(pady=10)
+        titulo.pack(side=tk.LEFT, padx=10)
         
-        # === FRAME PRINCIPAL (2 columnas) ===
-        frame_principal = tk.Frame(self.root, bg=self.color_fondo)
-        frame_principal.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        # Separador visual
+        tk.Label(
+            frame_banner_content,
+            text="|",
+            font=("Segoe UI", 14),
+            bg=COLORS['azul_oscuro'],
+            fg=COLORS['azul_claro']
+        ).pack(side=tk.LEFT, padx=10)
         
-        # ---- Columna Izquierda: Video ----
-        frame_video = tk.LabelFrame(
-            frame_principal, 
+        # Subtítulo
+        subtitulo = tk.Label(
+            frame_banner_content,
+            text="Ing. Emilio Rebuelto - Berisso",
+            font=("Segoe UI", 10),
+            bg=COLORS['azul_oscuro'],
+            fg=COLORS['texto_secundario']
+        )
+        subtitulo.pack(side=tk.LEFT)
+        
+        # ============================================
+        # FRAME PRINCIPAL (2 columnas)
+        # ============================================
+        frame_principal = tk.Frame(self.root, bg=COLORS['fondo'])
+        frame_principal.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=10, pady=5)
+        frame_principal.grid_rowconfigure(0, weight=1)
+        frame_principal.grid_columnconfigure(0, weight=3)  # Video más grande
+        frame_principal.grid_columnconfigure(1, weight=1)  # Panel derecho
+        
+        # ---- Columna Izquierda: Video (MÁS GRANDE) ----
+        frame_video = tk.Frame(
+            frame_principal,
+            bg=COLORS['fondo_card'],
+            bd=1,
+            relief=tk.FLAT
+        )
+        frame_video.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        frame_video.grid_rowconfigure(0, weight=1)
+        frame_video.grid_columnconfigure(0, weight=1)
+        
+        # Título del video
+        tk.Label(
+            frame_video,
             text="📹 Cámara en vivo",
-            font=("Arial", 11, "bold"),
-            bg=self.color_fondo
-        )
-        frame_video.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+            font=("Segoe UI", 11, "bold"),
+            bg=COLORS['fondo_card'],
+            fg=COLORS['texto'],
+            padx=10,
+            pady=5
+        ).grid(row=0, column=0, sticky="w")
         
+        # Label del video (ocupa el espacio principal)
         self.label_video = tk.Label(
-            frame_video, 
-            text="Esperando cámara...",
-            bg="#2c3e50",
-            fg="white",
-            font=("Arial", 14)
+            frame_video,
+            text="🔄 Iniciando cámara...",
+            bg=COLORS['video_bg'],
+            fg=COLORS['texto_secundario'],
+            font=("Segoe UI", 16)
         )
-        self.label_video.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.label_video.grid(row=1, column=0, sticky="nsew", padx=8, pady=(0, 8))
+        self.label_video.grid_rowconfigure(0, weight=1)
+        self.label_video.grid_columnconfigure(0, weight=1)
+        
+        # Configurar el frame_video para que el label de video se expanda
+        frame_video.grid_rowconfigure(1, weight=1)
+        frame_video.grid_columnconfigure(0, weight=1)
         
         # ---- Columna Derecha: Información ----
-        frame_info = tk.LabelFrame(
+        frame_info = tk.Frame(
             frame_principal,
-            text="📊 Información",
-            font=("Arial", 11, "bold"),
-            bg=self.color_fondo
+            bg=COLORS['fondo_card'],
+            bd=1,
+            relief=tk.FLAT
         )
-        frame_info.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(5, 0))
+        frame_info.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
+        frame_info.grid_rowconfigure(0, weight=0)  # Título
+        frame_info.grid_rowconfigure(1, weight=0)  # Último reconocido
+        frame_info.grid_rowconfigure(2, weight=0)  # Separador
+        frame_info.grid_rowconfigure(3, weight=1)  # Registro (expande)
+        frame_info.grid_rowconfigure(4, weight=0)  # Botón recargar
+        frame_info.grid_columnconfigure(0, weight=1)
         
-        # Último reconocido
+        # Título del panel
         tk.Label(
             frame_info,
+            text="📊 INFORMACIÓN",
+            font=("Segoe UI", 11, "bold"),
+            bg=COLORS['fondo_card'],
+            fg=COLORS['texto'],
+            padx=10,
+            pady=5
+        ).grid(row=0, column=0, sticky="w")
+        
+        # ---- Último reconocido ----
+        frame_reconocido = tk.Frame(frame_info, bg=COLORS['fondo_card'])
+        frame_reconocido.grid(row=1, column=0, sticky="ew", padx=10, pady=5)
+        
+        tk.Label(
+            frame_reconocido,
             text="👤 ÚLTIMO RECONOCIDO",
-            font=("Arial", 10, "bold"),
-            bg=self.color_fondo,
-            fg="#2c3e50"
-        ).pack(pady=(10, 5))
+            font=("Segoe UI", 9, "bold"),
+            bg=COLORS['fondo_card'],
+            fg=COLORS['texto_secundario']
+        ).pack(anchor="w")
         
         self.label_nombre = tk.Label(
-            frame_info,
+            frame_reconocido,
             text="---",
-            font=("Arial", 16, "bold"),
-            bg=self.color_fondo,
-            fg="#2c3e50"
+            font=("Segoe UI", 20, "bold"),
+            bg=COLORS['fondo_card'],
+            fg=COLORS['texto']
         )
-        self.label_nombre.pack()
+        self.label_nombre.pack(anchor="w", pady=(2, 0))
         
         self.label_distancia = tk.Label(
-            frame_info,
+            frame_reconocido,
             text="Distancia: ---",
-            font=("Arial", 10),
-            bg=self.color_fondo,
-            fg="#7f8c8d"
+            font=("Segoe UI", 10),
+            bg=COLORS['fondo_card'],
+            fg=COLORS['texto_secundario']
         )
-        self.label_distancia.pack()
+        self.label_distancia.pack(anchor="w")
         
         self.label_estado = tk.Label(
-            frame_info,
+            frame_reconocido,
             text="⏳ Esperando captura",
-            font=("Arial", 11, "bold"),
-            bg=self.color_fondo,
-            fg="#f39c12"
+            font=("Segoe UI", 11, "bold"),
+            bg=COLORS['fondo_card'],
+            fg=COLORS['amarillo']
         )
-        self.label_estado.pack(pady=5)
+        self.label_estado.pack(anchor="w", pady=(5, 0))
         
-        # Separador
-        ttk.Separator(frame_info, orient='horizontal').pack(fill=tk.X, padx=10, pady=10)
+        # ---- Separador ----
+        separador = tk.Frame(frame_info, bg=COLORS['borde'], height=1)
+        separador.grid(row=2, column=0, sticky="ew", padx=10, pady=10)
         
-        # Registro de hoy
+        # ---- Registro de hoy ----
         tk.Label(
             frame_info,
-            text="📋 REGISTRO DE INGRESOS (hoy)",
-            font=("Arial", 10, "bold"),
-            bg=self.color_fondo,
-            fg="#2c3e50"
-        ).pack(pady=(10, 5))
+            text="📋 REGISTRO DE INGRESOS",
+            font=("Segoe UI", 9, "bold"),
+            bg=COLORS['fondo_card'],
+            fg=COLORS['texto_secundario']
+        ).grid(row=3, column=0, sticky="w", padx=10, pady=(0, 5))
         
         self.texto_registro = scrolledtext.ScrolledText(
             frame_info,
-            height=10,
-            width=35,
             font=("Consolas", 9),
-            bg="#ecf0f1",
-            fg="#2c3e50"
+            bg=COLORS['fondo_input'],
+            fg=COLORS['texto'],
+            insertbackground=COLORS['texto'],
+            relief=tk.FLAT,
+            bd=1,
+            highlightbackground=COLORS['borde'],
+            highlightcolor=COLORS['azul_claro'],
+            highlightthickness=1
         )
-        self.texto_registro.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.texto_registro.grid(row=3, column=0, sticky="nsew", padx=10, pady=(0, 5))
         self.texto_registro.config(state=tk.DISABLED)
         
-        # Botón para recargar base de datos
+        # ---- Botón recargar ----
         btn_recargar = tk.Button(
             frame_info,
             text="🔄 Recargar Alumnos",
             command=self.recargar_base_datos,
-            font=("Arial", 9),
-            bg="#3498db",
-            fg="white",
+            font=("Segoe UI", 9, "bold"),
+            bg=COLORS['azul_medio'],
+            fg=COLORS['texto'],
+            activebackground=COLORS['azul_claro'],
+            activeforeground=COLORS['texto'],
+            relief=tk.FLAT,
+            cursor="hand2",
             padx=10,
-            pady=5,
-            cursor="hand2"
+            pady=5
         )
-        btn_recargar.pack(pady=5)
+        btn_recargar.grid(row=4, column=0, pady=10, padx=10, sticky="ew")
         
-        # === FRAME INFERIOR: Controles ===
-        frame_controles = tk.Frame(self.root, bg=self.color_fondo)
-        frame_controles.pack(fill=tk.X, padx=10, pady=10)
+        # ============================================
+        # FRAME INFERIOR: Controles
+        # ============================================
+        frame_controles = tk.Frame(self.root, bg=COLORS['fondo'])
+        frame_controles.grid(row=2, column=0, columnspan=2, sticky="ew", padx=10, pady=10)
         
-        # Botones
+        # Botón Capturar (Verde)
         btn_capturar = tk.Button(
             frame_controles,
             text="📸 CAPTURAR (Espacio)",
             command=self.capturar_rostro,
-            font=("Arial", 10, "bold"),
-            bg=self.color_verde,
-            fg="white",
+            font=("Segoe UI", 10, "bold"),
+            bg=COLORS['verde'],
+            fg=COLORS['texto_oscuro'],
+            activebackground="#3fb950",
+            activeforeground=COLORS['texto_oscuro'],
+            relief=tk.FLAT,
+            cursor="hand2",
             padx=20,
-            pady=8,
-            cursor="hand2"
+            pady=8
         )
         btn_capturar.pack(side=tk.LEFT, padx=5)
         
+        # Botón Reiniciar
         btn_reiniciar = tk.Button(
             frame_controles,
             text="🔄 Reiniciar (R)",
             command=self.reiniciar_sistema,
-            font=("Arial", 10),
-            bg="#3498db",
-            fg="white",
+            font=("Segoe UI", 10),
+            bg=COLORS['azul_medio'],
+            fg=COLORS['texto'],
+            activebackground=COLORS['azul_claro'],
+            activeforeground=COLORS['texto'],
+            relief=tk.FLAT,
+            cursor="hand2",
             padx=15,
-            pady=8,
-            cursor="hand2"
+            pady=8
         )
         btn_reiniciar.pack(side=tk.LEFT, padx=5)
         
+        # Botón Estado
         btn_estado = tk.Button(
             frame_controles,
             text="ℹ️ Estado",
             command=self.mostrar_estado,
-            font=("Arial", 10),
-            bg="#95a5a6",
-            fg="white",
+            font=("Segoe UI", 10),
+            bg=COLORS['fondo_card'],
+            fg=COLORS['texto_secundario'],
+            activebackground=COLORS['borde'],
+            activeforeground=COLORS['texto'],
+            relief=tk.FLAT,
+            cursor="hand2",
             padx=15,
-            pady=8,
-            cursor="hand2"
+            pady=8
         )
         btn_estado.pack(side=tk.LEFT, padx=5)
         
+        # Estado del sistema (a la derecha)
+        self.label_sistema = tk.Label(
+            frame_controles,
+            text="🟢 Sistema activo",
+            font=("Segoe UI", 10),
+            bg=COLORS['fondo'],
+            fg=COLORS['verde']
+        )
+        self.label_sistema.pack(side=tk.RIGHT, padx=10)
+        
+        # Botón Salir (Rojo, a la derecha)
         btn_salir = tk.Button(
             frame_controles,
             text="❌ Salir (ESC)",
             command=self.salir,
-            font=("Arial", 10, "bold"),
-            bg=self.color_rojo,
-            fg="white",
+            font=("Segoe UI", 10, "bold"),
+            bg=COLORS['rojo'],
+            fg=COLORS['texto'],
+            activebackground="#da3633",
+            activeforeground=COLORS['texto'],
+            relief=tk.FLAT,
+            cursor="hand2",
             padx=20,
-            pady=8,
-            cursor="hand2"
+            pady=8
         )
         btn_salir.pack(side=tk.RIGHT, padx=5)
-        
-        # Estado del sistema
-        self.label_sistema = tk.Label(
-            frame_controles,
-            text="🟢 Sistema activo",
-            font=("Arial", 9),
-            bg=self.color_fondo,
-            fg=self.color_verde
-        )
-        self.label_sistema.pack(side=tk.LEFT, padx=20)
         
         # Atajos de teclado
         self.root.bind('<space>', lambda e: self.capturar_rostro())
@@ -281,7 +407,6 @@ class SistemaReconocimientoGUI:
     # ============================================
     
     def cargar_base_datos(self):
-        """Carga la base de datos usando db_manager"""
         try:
             self.base_datos = cargar_db()
             if self.base_datos:
@@ -289,39 +414,32 @@ class SistemaReconocimientoGUI:
                 self.agregar_registro(f"✅ Sistema iniciado. {len(self.base_datos)} alumnos registrados.")
             else:
                 self.base_datos = {}
-                self.agregar_registro("⚠️ No se encontró base de datos. Ejecuta modulo_admin/registrar_alumnos.py")
+                self.agregar_registro("⚠️ No se encontró base de datos.")
         except Exception as e:
-            print(f"❌ Error al cargar base de datos: {e}")
+            print(f"❌ Error: {e}")
             self.base_datos = {}
-            self.agregar_registro(f"❌ Error al cargar base de datos: {e}")
     
     def recargar_base_datos(self):
-        """Recarga la base de datos (útil después de agregar alumnos)"""
         self.agregar_registro("🔄 Recargando base de datos...")
         self.cargar_base_datos()
         if self.base_datos:
-            self.agregar_registro(f"✅ Base de datos recargada. {len(self.base_datos)} alumnos.")
+            self.agregar_registro(f"✅ Recargada. {len(self.base_datos)} alumnos.")
         self.mostrar_estado()
     
     def iniciar_camara(self):
-        """Inicia la cámara usando el índice configurado"""
         try:
-            # Usar la variable CAMARA_INDICE definida al inicio
             self.cap = cv2.VideoCapture(CAMARA_INDICE)
             if not self.cap.isOpened():
                 raise Exception(f"No se pudo acceder a la cámara {CAMARA_INDICE}")
             self.running = True
-            self.agregar_registro(f"📹 Cámara {CAMARA_INDICE} iniciada correctamente")
+            self.agregar_registro(f"📹 Cámara {CAMARA_INDICE} iniciada")
         except Exception as e:
-            self.agregar_registro(f"❌ Error con cámara: {e}")
-            self.label_video.config(text=f"❌ No se pudo acceder a la cámara {CAMARA_INDICE}")
-            self.label_sistema.config(text="❌ Cámara no disponible", fg=self.color_rojo)
+            self.agregar_registro(f"❌ Error: {e}")
+            self.label_video.config(text="❌ No se pudo acceder a la cámara")
     
     def verificar_camara_activa(self):
-        """Verifica que la cámara esté enviando imagen válida"""
         if not self.running or self.cap is None:
             return False
-        
         try:
             ret, frame = self.cap.read()
             if not ret or frame is None:
@@ -333,106 +451,91 @@ class SistemaReconocimientoGUI:
             return False
     
     def actualizar_video(self):
-        """Actualiza el video en tiempo real"""
+        """Actualiza el video en tiempo real - SIN EFECTO ESPEJO"""
         if self.running and self.cap:
             try:
                 ret, frame = self.cap.read()
                 if ret and frame is not None:
                     self.frame_actual = frame.copy()
-                    frame_display = cv2.resize(frame, (640, 480))
+                    # Redimensionar manteniendo proporción
+                    h, w = frame.shape[:2]
+                    aspect_ratio = w / h
+                    new_w = 800
+                    new_h = int(new_w / aspect_ratio)
+                    
+                    # === CAMBIO IMPORTANTE ===
+                    # Mostrar la imagen NATURAL (sin efecto espejo)
+                    # Si quieres efecto espejo, usa cv2.flip(frame, 1)
+                    frame_display = cv2.resize(frame, (new_w, new_h))
+                    # ===========================
+                    
                     frame_rgb = cv2.cvtColor(frame_display, cv2.COLOR_BGR2RGB)
                     img = Image.fromarray(frame_rgb)
                     img_tk = ImageTk.PhotoImage(image=img)
                     self.label_video.config(image=img_tk)
                     self.label_video.image = img_tk
-                    
-                    if self.label_sistema.cget('text') == "⚠️ Sin imagen":
-                        self.label_sistema.config(text="🟢 Sistema activo", fg=self.color_verde)
             except Exception:
                 pass
-        
         self.root.after(30, self.actualizar_video)
     
     def actualizar_reloj(self):
         ahora = datetime.datetime.now().strftime("%H:%M:%S")
-        self.root.title(f"🎓 Sistema de Reconocimiento Facial - Escuela ({ahora})")
+        self.root.title(f"E.E.S.T. N°2 - Sistema de Reconocimiento Facial ({ahora})")
         self.root.after(1000, self.actualizar_reloj)
     
     def detectar_rostro(self, frame):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        caras = self.face_cascade.detectMultiScale(
-            gray, 
-            scaleFactor=1.1, 
-            minNeighbors=5, 
-            minSize=(60, 60)
-        )
+        caras = self.face_cascade.detectMultiScale(gray, 1.1, 5, minSize=(60, 60))
         return len(caras) > 0, caras
     
     def capturar_rostro(self):
-        """Captura y reconoce el rostro usando db_manager"""
-        if not self.running or self.cap is None:
-            self.agregar_registro("⚠️ Sistema no listo para capturar")
-            return
-        
-        if self.base_datos is None or len(self.base_datos) == 0:
-            self.agregar_registro("⚠️ No hay alumnos registrados en la base de datos")
-            self.label_nombre.config(text="SIN ALUMNOS", fg=self.color_rojo)
-            self.label_estado.config(text="⚠️ Base de datos vacía", fg=self.color_rojo)
+        if not self.running or self.cap is None or self.base_datos is None:
+            self.agregar_registro("⚠️ Sistema no listo")
             return
         
         if not self.verificar_camara_activa():
             self.agregar_registro("⚠️ Cámara sin imagen")
-            self.label_nombre.config(text="ERROR CÁMARA", fg=self.color_rojo)
-            self.label_distancia.config(text="---")
-            self.label_estado.config(text="❌ Cámara no disponible", fg=self.color_rojo)
-            self.label_sistema.config(text="⚠️ Sin imagen", fg=self.color_rojo)
+            self.label_nombre.config(text="ERROR CÁMARA", fg=COLORS['rojo'])
+            self.label_estado.config(text="❌ Cámara no disponible", fg=COLORS['rojo'])
             return
         
-        self.agregar_registro("🔍 Capturando rostro...")
-        self.label_estado.config(text="🔍 Reconociendo...", fg="#f39c12")
+        self.agregar_registro("🔍 Capturando...")
+        self.label_estado.config(text="🔍 Reconociendo...", fg=COLORS['amarillo'])
         
         try:
             ret, frame = self.cap.read()
-            if not ret or frame is None:
-                self.agregar_registro("❌ Error al capturar imagen")
+            if not ret:
+                self.agregar_registro("❌ Error al capturar")
                 return
             
             hay_rostro, caras = self.detectar_rostro(frame)
             if not hay_rostro:
-                self.agregar_registro("⚠️ No se detectó ningún rostro")
-                self.label_nombre.config(text="NO HAY ROSTRO", fg=self.color_rojo)
-                self.label_distancia.config(text="---")
-                self.label_estado.config(text="⚠️ Sin rostro detectado", fg=self.color_rojo)
-                self.label_sistema.config(text="⚠️ Sin rostro", fg=self.color_rojo)
+                self.agregar_registro("⚠️ No se detectó rostro")
+                self.label_nombre.config(text="NO HAY ROSTRO", fg=COLORS['rojo'])
+                self.label_estado.config(text="⚠️ Sin rostro", fg=COLORS['rojo'])
                 return
             
-            self.agregar_registro(f"✅ Rostro detectado ({len(caras)} cara(s))")
             cv2.imwrite(TEMP_IMG, frame)
             
-            inicio = time.time()
             mejor_alumno, mejor_distancia = self.reconocer_rostro(TEMP_IMG)
-            fin = time.time()
             
             if mejor_alumno and mejor_distancia < UMBRAL:
                 self.ultimo_alumno = mejor_alumno
                 self.ultima_distancia = mejor_distancia
                 
-                self.label_nombre.config(text=mejor_alumno.upper(), fg=self.color_verde)
+                self.label_nombre.config(text=mejor_alumno.upper(), fg=COLORS['verde'])
                 self.label_distancia.config(text=f"Distancia: {mejor_distancia:.4f}")
-                self.label_estado.config(text="✅ ACCESO CONCEDIDO", fg=self.color_verde)
-                self.label_sistema.config(text="✅ Acceso concedido", fg=self.color_verde)
+                self.label_estado.config(text="✅ ACCESO CONCEDIDO", fg=COLORS['verde'])
+                self.label_sistema.config(text="✅ Acceso concedido", fg=COLORS['verde'])
                 
                 registrar_ingreso(mejor_alumno, "CONCEDIDO")
                 self.agregar_registro(f"✅ {mejor_alumno} - ACCESO CONCEDIDO (dist: {mejor_distancia:.4f})")
                 print(f"\n✅ {mejor_alumno} - ACCESO CONCEDIDO (dist: {mejor_distancia:.4f})")
-                
             else:
-                self.label_nombre.config(text="ACCESO DENEGADO", fg=self.color_rojo)
-                self.label_distancia.config(
-                    text=f"Distancia: {mejor_distancia:.4f}" if mejor_alumno else "No detectado"
-                )
-                self.label_estado.config(text="❌ ACCESO DENEGADO", fg=self.color_rojo)
-                self.label_sistema.config(text="❌ Acceso denegado", fg=self.color_rojo)
+                self.label_nombre.config(text="ACCESO DENEGADO", fg=COLORS['rojo'])
+                self.label_distancia.config(text=f"Distancia: {mejor_distancia:.4f}" if mejor_alumno else "No detectado")
+                self.label_estado.config(text="❌ ACCESO DENEGADO", fg=COLORS['rojo'])
+                self.label_sistema.config(text="❌ Acceso denegado", fg=COLORS['rojo'])
                 
                 nombre = mejor_alumno if mejor_alumno else "DESCONOCIDO"
                 registrar_ingreso(nombre, "DENEGADO")
@@ -445,10 +548,8 @@ class SistemaReconocimientoGUI:
         except Exception as e:
             self.agregar_registro(f"❌ Error: {e}")
             print(f"❌ Error: {e}")
-            self.label_estado.config(text="❌ Error", fg=self.color_rojo)
     
     def reconocer_rostro(self, ruta_imagen):
-        """Reconoce un rostro comparando con la base de datos"""
         if not self.base_datos:
             return None, float('inf')
         
@@ -465,18 +566,15 @@ class SistemaReconocimientoGUI:
                     silent=True
                 )
                 distancia = resultado['distance']
-                
                 if distancia < mejor_distancia:
                     mejor_distancia = distancia
                     mejor_alumno = alumno
-                    
             except Exception:
                 continue
         
         return mejor_alumno, mejor_distancia
     
     def agregar_registro(self, mensaje):
-        """Agrega un mensaje al registro visual"""
         self.texto_registro.config(state=tk.NORMAL)
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
         self.texto_registro.insert(tk.END, f"[{timestamp}] {mensaje}\n")
@@ -484,38 +582,32 @@ class SistemaReconocimientoGUI:
         self.texto_registro.config(state=tk.DISABLED)
     
     def mostrar_estado(self):
-        """Muestra información del sistema"""
         info = f"""
 📊 ESTADO DEL SISTEMA
 
 📁 Base de datos: {'✅ Cargada' if self.base_datos else '❌ No disponible'}
-👥 Alumnos registrados: {len(self.base_datos) if self.base_datos else 0}
-📹 Cámara: {'✅ Activa (índice ' + str(CAMARA_INDICE) + ')' if self.running else '❌ Inactiva'}
+👥 Alumnos: {len(self.base_datos) if self.base_datos else 0}
+📹 Cámara: {'✅ Activa' if self.running else '❌ Inactiva'}
 📏 Umbral: {UMBRAL}
-👤 Último reconocido: {self.ultimo_alumno if self.ultimo_alumno else 'Ninguno'}
-📐 Última distancia: {self.ultima_distancia:.4f if self.ultima_distancia else '---'}
+👤 Último: {self.ultimo_alumno if self.ultimo_alumno else 'Ninguno'}
 """
         self.agregar_registro("📊 " + info.replace('\n', ' | '))
     
     def reiniciar_sistema(self):
-        """Reinicia el sistema"""
-        self.agregar_registro("🔄 Reiniciando sistema...")
-        self.label_nombre.config(text="---", fg="#2c3e50")
+        self.agregar_registro("🔄 Reiniciando...")
+        self.label_nombre.config(text="---", fg=COLORS['texto'])
         self.label_distancia.config(text="Distancia: ---")
-        self.label_estado.config(text="⏳ Esperando captura", fg="#f39c12")
-        self.label_sistema.config(text="🟢 Sistema activo", fg=self.color_verde)
+        self.label_estado.config(text="⏳ Esperando captura", fg=COLORS['amarillo'])
+        self.label_sistema.config(text="🟢 Sistema activo", fg=COLORS['verde'])
         self.ultimo_alumno = ""
         self.ultima_distancia = 0.0
         self.cargar_base_datos()
     
     def salir(self):
-        """Cierra el sistema correctamente"""
         self.agregar_registro("👋 Cerrando sistema...")
         self.running = False
-        
         if self.cap:
             self.cap.release()
-        
         cv2.destroyAllWindows()
         self.root.quit()
         self.root.destroy()
@@ -533,10 +625,8 @@ if __name__ == "__main__":
         sys.exit(1)
     
     print("=" * 50)
-    print("📸 SELECCIÓN DE CÁMARA")
-    print(f"   Índice configurado: {CAMARA_INDICE}")
-    print("   Si no ves imagen, cambia CAMARA_INDICE en el archivo")
-    print("   0 = Cámara integrada, 1 = USB externa, 2 = Segunda USB")
+    print("🏫 E.E.S.T. N°2 - Sistema de Reconocimiento Facial")
+    print("   Ing. Emilio Rebuelto - Berisso")
     print("=" * 50)
     
     root = tk.Tk()
