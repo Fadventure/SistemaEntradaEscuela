@@ -74,6 +74,7 @@ COLORS = {
 # ============================================
 
 class SistemaReconocimientoGUI:
+
     def __init__(self, root):
         self.root = root
         self.root.title("E.E.S.T. N°2 - Sistema de Reconocimiento Facial")
@@ -112,12 +113,34 @@ class SistemaReconocimientoGUI:
         self.actualizar_video()
         self.actualizar_reloj()
     
+    # ============================================
+    # FUNCIONES DE UTILIDAD
+    # ============================================
+
+    def cargar_logo(self, tamaño=(50, 50)):
+        """Carga el logo de la escuela desde la carpeta recursos"""
+        try:
+            from PIL import Image
+            ruta_logo = os.path.join(RAIZ_PROYECTO, "recursos", "logo_escuela.png")
+            
+            if os.path.exists(ruta_logo):
+                img = Image.open(ruta_logo)
+                img = img.resize(tamaño, Image.Resampling.LANCZOS)
+                return ImageTk.PhotoImage(img)
+            else:
+                print(f"⚠️ Logo no encontrado en: {ruta_logo}")
+                return None
+        except Exception as e:
+            print(f"❌ Error al cargar logo: {e}")
+            return None
+
     def crear_widgets(self):
         """Crea todos los elementos con estilo oscuro"""
         
         # ============================================
         # BANNER SUPERIOR
         # ============================================
+
         banner = tk.Frame(self.root, bg=COLORS['azul_oscuro'], height=65)
         banner.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 10))
         banner.grid_propagate(False)
@@ -125,6 +148,17 @@ class SistemaReconocimientoGUI:
         # Contenido del banner (centrado)
         frame_banner_content = tk.Frame(banner, bg=COLORS['azul_oscuro'])
         frame_banner_content.pack(expand=True)
+
+        # --- LOGO (agregar esto) ---
+        logo_img = self.cargar_logo((45, 45))  # Tamaño del logo
+        if logo_img:
+            label_logo = tk.Label(
+                frame_banner_content,
+                image=logo_img,
+                bg=COLORS['azul_oscuro']
+            )
+            label_logo.image = logo_img  # Guardar referencia para que no se borre
+            label_logo.pack(side=tk.LEFT, padx=5)
         
         # Título
         titulo = tk.Label(
@@ -178,7 +212,7 @@ class SistemaReconocimientoGUI:
         # Título del video
         tk.Label(
             frame_video,
-            text="📹 Cámara en vivo",
+            text=" Cámara en vivo",
             font=("Segoe UI", 11, "bold"),
             bg=COLORS['fondo_card'],
             fg=COLORS['texto'],
@@ -298,7 +332,7 @@ class SistemaReconocimientoGUI:
         # ---- Botón recargar ----
         btn_recargar = tk.Button(
             frame_info,
-            text="🔄 Recargar Alumnos",
+            text=" Recargar Alumnos",
             command=self.recargar_base_datos,
             font=("Segoe UI", 9, "bold"),
             bg=COLORS['azul_medio'],
@@ -321,7 +355,7 @@ class SistemaReconocimientoGUI:
         # Botón Capturar (Verde)
         btn_capturar = tk.Button(
             frame_controles,
-            text="📸 CAPTURAR (Espacio)",
+            text=" CAPTURAR (Espacio)",
             command=self.capturar_rostro,
             font=("Segoe UI", 10, "bold"),
             bg=COLORS['verde'],
@@ -432,7 +466,7 @@ class SistemaReconocimientoGUI:
             if not self.cap.isOpened():
                 raise Exception(f"No se pudo acceder a la cámara {CAMARA_INDICE}")
             self.running = True
-            self.agregar_registro(f"📹 Cámara {CAMARA_INDICE} iniciada")
+            self.agregar_registro(f" Cámara {CAMARA_INDICE} iniciada")
         except Exception as e:
             self.agregar_registro(f"❌ Error: {e}")
             self.label_video.config(text="❌ No se pudo acceder a la cámara")

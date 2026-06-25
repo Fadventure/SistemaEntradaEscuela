@@ -1,5 +1,5 @@
 # panel_central.py - Panel de Administración Unificado
-# Versión 3.2 - Cámara Grande SIN EFECTO ESPEJO
+# Versión 3.3 - Con Buscador y Lista Mejorada
 
 import os
 import sys
@@ -68,6 +68,8 @@ class PanelCentral:
         
         # Variables para el admin
         self.base_datos = None
+        self.lista_completa = []  # Lista completa de alumnos
+        self.lista_filtrada = []  # Lista filtrada por búsqueda
         
         # Configurar grid principal
         self.root.grid_rowconfigure(0, weight=0)  # Banner
@@ -91,6 +93,27 @@ class PanelCentral:
         self.mostrar_vista("registro")
     
     # ============================================
+    # FUNCIONES DE UTILIDAD
+    # ============================================
+    
+    def cargar_logo(self, tamaño=(50, 50)):
+        """Carga el logo de la escuela desde la carpeta recursos"""
+        try:
+            from PIL import Image
+            ruta_logo = os.path.join(RAIZ_PROYECTO, "recursos", "logo_escuela.png")
+            
+            if os.path.exists(ruta_logo):
+                img = Image.open(ruta_logo)
+                img = img.resize(tamaño, Image.Resampling.LANCZOS)
+                return ImageTk.PhotoImage(img)
+            else:
+                print(f"⚠️ Logo no encontrado en: {ruta_logo}")
+                return None
+        except Exception as e:
+            print(f"❌ Error al cargar logo: {e}")
+            return None
+    
+    # ============================================
     # BANNER SUPERIOR
     # ============================================
     
@@ -101,6 +124,17 @@ class PanelCentral:
         
         frame_banner = tk.Frame(banner, bg=COLORS['azul_oscuro'])
         frame_banner.pack(expand=True)
+        
+        # Logo
+        logo_img = self.cargar_logo((45, 45))
+        if logo_img:
+            label_logo = tk.Label(
+                frame_banner,
+                image=logo_img,
+                bg=COLORS['azul_oscuro']
+            )
+            label_logo.image = logo_img
+            label_logo.pack(side=tk.LEFT, padx=5)
         
         tk.Label(
             frame_banner,
@@ -198,10 +232,10 @@ class PanelCentral:
         self.frame_registro = tk.Frame(self.frame_contenido, bg=COLORS['fondo'])
         self.frame_registro.grid(row=0, column=0, sticky="nsew")
         self.frame_registro.grid_rowconfigure(0, weight=1)
-        self.frame_registro.grid_columnconfigure(0, weight=3)  # Video más grande
-        self.frame_registro.grid_columnconfigure(1, weight=1)  # Datos más pequeños
+        self.frame_registro.grid_columnconfigure(0, weight=3)
+        self.frame_registro.grid_columnconfigure(1, weight=1)
         
-        # ---- Video (Cámara Grande) ----
+        # ---- Video ----
         frame_video = tk.Frame(
             self.frame_registro,
             bg=COLORS['fondo_card'],
@@ -239,14 +273,7 @@ class PanelCentral:
             relief=tk.FLAT
         )
         frame_datos.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
-        frame_datos.grid_rowconfigure(0, weight=0)
-        frame_datos.grid_rowconfigure(1, weight=0)
-        frame_datos.grid_rowconfigure(2, weight=0)
-        frame_datos.grid_rowconfigure(3, weight=0)
-        frame_datos.grid_rowconfigure(4, weight=0)
-        frame_datos.grid_rowconfigure(5, weight=1)  # Foto tomada (expande)
-        frame_datos.grid_rowconfigure(6, weight=0)
-        frame_datos.grid_rowconfigure(7, weight=0)
+        frame_datos.grid_rowconfigure(5, weight=1)
         frame_datos.grid_columnconfigure(0, weight=1)
         
         tk.Label(
@@ -325,7 +352,6 @@ class PanelCentral:
         )
         self.label_foto_tomada.grid(row=5, column=0, sticky="nsew", padx=10, pady=(0, 5))
         
-        # Botones
         frame_botones = tk.Frame(frame_datos, bg=COLORS['fondo_card'])
         frame_botones.grid(row=6, column=0, sticky="ew", padx=10, pady=10)
         
@@ -370,17 +396,19 @@ class PanelCentral:
         )
         self.label_estado_registro.grid(row=7, column=0, sticky="w", padx=10, pady=(0, 5))
         
-        # === VISTA ADMIN ===
+        # === VISTA ADMIN (MEJORADA) ===
         self.frame_admin = tk.Frame(self.frame_contenido, bg=COLORS['fondo'])
         self.frame_admin.grid(row=0, column=0, sticky="nsew")
-        self.frame_admin.grid_rowconfigure(0, weight=0)
-        self.frame_admin.grid_rowconfigure(1, weight=1)
-        self.frame_admin.grid_rowconfigure(2, weight=0)
+        self.frame_admin.grid_rowconfigure(0, weight=0)  # Botones
+        self.frame_admin.grid_rowconfigure(1, weight=0)  # Buscador
+        self.frame_admin.grid_rowconfigure(2, weight=0)  # Título
+        self.frame_admin.grid_rowconfigure(3, weight=1)  # Lista (expande)
+        self.frame_admin.grid_rowconfigure(4, weight=0)  # Estado
         self.frame_admin.grid_columnconfigure(0, weight=1)
         
-        # Botones del admin
+        # ---- Botones del admin ----
         frame_admin_botones = tk.Frame(self.frame_admin, bg=COLORS['fondo'])
-        frame_admin_botones.grid(row=0, column=0, sticky="ew", pady=10)
+        frame_admin_botones.grid(row=0, column=0, sticky="ew", pady=(0, 10))
         
         btn_eliminar = tk.Button(
             frame_admin_botones,
@@ -414,17 +442,49 @@ class PanelCentral:
         )
         btn_actualizar.pack(side=tk.LEFT, padx=5)
         
-        # Lista de alumnos
+        # ---- BUSCADOR ----
+        frame_buscador = tk.Frame(self.frame_admin, bg=COLORS['fondo'])
+        frame_buscador.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
+        frame_buscador.grid_columnconfigure(0, weight=0)
+        frame_buscador.grid_columnconfigure(1, weight=1)
+        
+        tk.Label(
+            frame_buscador,
+            text="🔍 Buscar:",
+            font=("Segoe UI", 10),
+            bg=COLORS['fondo'],
+            fg=COLORS['texto_secundario']
+        ).grid(row=0, column=0, sticky="w", padx=(0, 10))
+        
+        self.entry_buscador = tk.Entry(
+            frame_buscador,
+            font=("Segoe UI", 11),
+            bg=COLORS['fondo_input'],
+            fg=COLORS['texto'],
+            insertbackground=COLORS['texto'],
+            relief=tk.FLAT,
+            bd=1,
+            highlightbackground=COLORS['borde'],
+            highlightcolor=COLORS['azul_claro'],
+            highlightthickness=1
+        )
+        self.entry_buscador.grid(row=0, column=1, sticky="ew")
+        
+        # Evento para filtrar mientras se escribe
+        self.entry_buscador.bind('<KeyRelease>', self.filtrar_lista)
+        
+        # ---- Título de la lista ----
         tk.Label(
             self.frame_admin,
             text="📋 Alumnos Registrados:",
             font=("Segoe UI", 10, "bold"),
             bg=COLORS['fondo'],
             fg=COLORS['texto_secundario']
-        ).grid(row=1, column=0, sticky="w", pady=(10, 5))
+        ).grid(row=2, column=0, sticky="w", padx=10, pady=(0, 5))
         
+        # ---- Lista de alumnos ----
         frame_lista = tk.Frame(self.frame_admin, bg=COLORS['fondo'])
-        frame_lista.grid(row=2, column=0, sticky="nsew")
+        frame_lista.grid(row=3, column=0, sticky="nsew", padx=10)
         frame_lista.grid_rowconfigure(0, weight=1)
         frame_lista.grid_columnconfigure(0, weight=1)
         
@@ -448,6 +508,7 @@ class PanelCentral:
         self.lista_alumnos.grid(row=0, column=0, sticky="nsew")
         scrollbar.config(command=self.lista_alumnos.yview)
         
+        # ---- Estado ----
         self.label_estado_admin = tk.Label(
             self.frame_admin,
             text="✅ Sistema listo",
@@ -455,14 +516,13 @@ class PanelCentral:
             bg=COLORS['fondo'],
             fg=COLORS['verde']
         )
-        self.label_estado_admin.grid(row=3, column=0, sticky="w", pady=10)
+        self.label_estado_admin.grid(row=4, column=0, sticky="w", padx=10, pady=10)
     
     # ============================================
     # NAVEGACIÓN
     # ============================================
     
     def mostrar_vista(self, vista):
-        """Cambia entre las vistas de Registro y Admin"""
         if vista == "registro":
             self.frame_registro.tkraise()
             self.btn_registro.config(bg=COLORS['azul_medio'], fg=COLORS['texto'])
@@ -490,24 +550,16 @@ class PanelCentral:
             self.label_estado_registro.config(text=f"❌ Error: {e}", fg=COLORS['rojo'])
     
     def actualizar_video(self):
-        """Actualiza el video en tiempo real - SIN EFECTO ESPEJO"""
         if self.running and self.cap:
             try:
                 ret, frame = self.cap.read()
                 if ret and frame is not None:
                     self.frame_actual = frame.copy()
-                    # Redimensionar manteniendo proporción
                     h, w = frame.shape[:2]
                     aspect_ratio = w / h
                     new_w = 600
                     new_h = int(new_w / aspect_ratio)
-                    
-                    # === CAMBIO IMPORTANTE ===
-                    # Mostrar la imagen NATURAL (sin efecto espejo)
-                    # Si quieres efecto espejo, usa cv2.flip(frame, 1)
                     frame_display = cv2.resize(frame, (new_w, new_h))
-                    # ===========================
-                    
                     frame_rgb = cv2.cvtColor(frame_display, cv2.COLOR_BGR2RGB)
                     img = Image.fromarray(frame_rgb)
                     img_tk = ImageTk.PhotoImage(image=img)
@@ -593,32 +645,72 @@ class PanelCentral:
             self.label_estado_registro.config(text=f"❌ Error: {e}", fg=COLORS['rojo'])
     
     # ============================================
-    # FUNCIONES DEL ADMIN
+    # FUNCIONES DEL ADMIN (MEJORADAS)
     # ============================================
     
     def actualizar_lista_alumnos(self):
-        self.lista_alumnos.delete(0, tk.END)
-        
+        """Carga la lista completa de alumnos y la muestra"""
         try:
-            alumnos = listar_alumnos()
-            if alumnos:
-                for alumno in sorted(alumnos):
-                    self.lista_alumnos.insert(tk.END, alumno)
+            self.lista_completa = sorted(listar_alumnos())
+            self.lista_filtrada = self.lista_completa.copy()
+            self.mostrar_lista_filtrada()
+            
+            if self.lista_completa:
                 self.label_estado_admin.config(
-                    text=f"✅ {len(alumnos)} alumnos cargados",
+                    text=f"✅ {len(self.lista_completa)} alumnos cargados",
                     fg=COLORS['verde']
                 )
             else:
-                self.lista_alumnos.insert(tk.END, "⚠️ No hay alumnos registrados")
                 self.label_estado_admin.config(
                     text="⚠️ Base de datos vacía",
                     fg=COLORS['amarillo']
                 )
         except Exception as e:
-            self.lista_alumnos.insert(tk.END, f"❌ Error: {e}")
             self.label_estado_admin.config(
-                text=f"❌ Error al cargar datos",
+                text=f"❌ Error al cargar datos: {e}",
                 fg=COLORS['rojo']
+            )
+    
+    def filtrar_lista(self, event=None):
+        """Filtra la lista de alumnos según el texto del buscador"""
+        texto = self.entry_buscador.get().strip().lower()
+        
+        if texto == "":
+            self.lista_filtrada = self.lista_completa.copy()
+        else:
+            self.lista_filtrada = [
+                alumno for alumno in self.lista_completa
+                if texto in alumno.lower()
+            ]
+        
+        self.mostrar_lista_filtrada()
+    
+    def mostrar_lista_filtrada(self):
+        """Muestra la lista filtrada en el Listbox"""
+        self.lista_alumnos.delete(0, tk.END)
+        
+        if self.lista_filtrada:
+            for alumno in self.lista_filtrada:
+                self.lista_alumnos.insert(tk.END, alumno)
+            
+            total = len(self.lista_filtrada)
+            total_completo = len(self.lista_completa)
+            
+            if total == total_completo:
+                self.label_estado_admin.config(
+                    text=f"✅ {total} alumnos cargados",
+                    fg=COLORS['verde']
+                )
+            else:
+                self.label_estado_admin.config(
+                    text=f"🔍 {total} de {total_completo} alumnos (filtrado)",
+                    fg=COLORS['azul_info']
+                )
+        else:
+            self.lista_alumnos.insert(tk.END, "🔍 No se encontraron coincidencias")
+            self.label_estado_admin.config(
+                text="🔍 Sin coincidencias",
+                fg=COLORS['amarillo']
             )
     
     def eliminar_alumno(self):
@@ -629,7 +721,7 @@ class PanelCentral:
         
         alumno = self.lista_alumnos.get(seleccionado[0])
         
-        if alumno.startswith(("⚠️", "❌")):
+        if alumno.startswith(("🔍", "⚠️", "❌")):
             return
         
         if messagebox.askyesno(
@@ -644,6 +736,7 @@ class PanelCentral:
                         f"El alumno '{alumno}' fue eliminado correctamente"
                     )
                     self.actualizar_lista_alumnos()
+                    self.entry_buscador.delete(0, tk.END)
                     self.label_estado_admin.config(
                         text=f"✅ Alumno '{alumno}' eliminado",
                         fg=COLORS['verde']
