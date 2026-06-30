@@ -74,3 +74,29 @@
 2026-06-25 12:43:17 - maria - DENEGADO
 2026-06-25 12:46:02 - joel - DENEGADO
 2026-06-25 12:46:45 - joel - DENEGADO
+2026-06-25 16:16:01 - fernando - CONCEDIDO
+2026-06-25 16:16:17 - fernando - DENEGADO
+2026-06-25 16:16:36 - maria - DENEGADO
+2026-06-25 16:45:22 - juan bautista - CONCEDIDO
+2026-06-25 16:45:49 - joel - DENEGADO
+2026-06-25 16:48:56 - maria - DENEGADO
+2026-06-25 16:49:07 - tinimansy - CONCEDIDO
+2026-06-25 16:49:23 - tinimansy - CONCEDIDO
+2026-06-25 16:49:31 - fernando - DENEGADO
+2026-06-25 16:49:48 - fernando - DENEGADO
+2026-06-25 16:49:56 - sofia - DENEGADO
+2026-06-25 16:50:20 - juan bautista - CONCEDIDO
+2026-06-25 16:50:36 - tinimansy - CONCEDIDO
+2026-06-25 16:51:48 - fernando - CONCEDIDO
+2026-06-25 16:52:03 - fernando - CONCEDIDO
+2026-06-25 16:52:26 - fernando - CONCEDIDO
+2026-06-25 16:52:41 - juan bautista - CONCEDIDO
+2026-06-25 16:56:16 - tinimansy - CONCEDIDO
+2026-06-25 16:56:44 - valentino di camillo - CONCEDIDO
+2026-06-25 16:56:57 - valentino di camillo - CONCEDIDO
+2026-06-25 16:57:20 - valentino di camillo - CONCEDIDO
+2026-06-25 16:57:47 - valentino di camillo - CONCEDIDO
+2026-06-25 16:59:42 - tinimansy - CONCEDIDO
+2026-06-25 17:00:31 - juan bautista - CONCEDIDO
+2026-06-25 17:00:52 - tinimansy - CONCEDIDO
+2026-06-25 17:01:07 - valentino di camillo - CONCEDIDO
