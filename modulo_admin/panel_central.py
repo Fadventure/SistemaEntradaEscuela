@@ -1,5 +1,5 @@
 # panel_central.py - Panel de Administración Unificado
-# Versión 3.3 - Con Buscador y Lista Mejorada
+# Versión 3.4 - Preparado para ejecutable
 
 import os
 import sys
@@ -13,17 +13,32 @@ from PIL import Image, ImageTk
 # CONFIGURACIÓN DE RUTAS
 # ============================================
 
-RAIZ_PROYECTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Detectar si estamos dentro de un ejecutable (.exe) o corriendo como script
+if getattr(sys, 'frozen', False):
+    # Estamos dentro de un ejecutable empaquetado con PyInstaller
+    RAIZ_PROYECTO = sys._MEIPASS
+else:
+    # Estamos corriendo como script normal
+    RAIZ_PROYECTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 sys.path.insert(0, RAIZ_PROYECTO)
 
-from deepface import DeepFace
-from base_datos.db_manager import cargar_db, guardar_db, listar_alumnos, eliminar_alumno
+# ============================================
+# CONFIGURACIÓN DE DEEPFACE PARA EJECUTABLE
+# ============================================
+
+# Le decimos a DeepFace que busque los modelos en la carpeta del proyecto
+DEEPFACE_HOME = os.path.join(RAIZ_PROYECTO, ".deepface")
+os.environ['DEEPFACE_HOME'] = DEEPFACE_HOME
 
 # ============================================
 # CONFIGURACIÓN
 # ============================================
 
 CARPETA_ALUMNOS = "rostros/alumnos_registrados"
+
+from deepface import DeepFace
+from base_datos.db_manager import cargar_db, guardar_db, listar_alumnos, eliminar_alumno
 
 # ============================================
 # COLORES - ESTILO OSCURO

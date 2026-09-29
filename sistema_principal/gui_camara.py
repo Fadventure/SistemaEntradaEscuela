@@ -1,5 +1,5 @@
 # gui_camara.py - Sistema de Reconocimiento Facial
-# Versión 2.7 - Estilo Oscuro con Cámara Grande SIN EFECTO ESPEJO
+# Versión 2.8 - Preparado para ejecutable
 
 import os
 import sys
@@ -21,8 +21,23 @@ CAMARA_INDICE = 0  # 0 = integrada, 1 o 2 = USB externa
 # CONFIGURACIÓN DE RUTAS
 # ============================================
 
-RAIZ_PROYECTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Detectar si estamos dentro de un ejecutable (.exe) o corriendo como script
+if getattr(sys, 'frozen', False):
+    # Estamos dentro de un ejecutable empaquetado con PyInstaller
+    RAIZ_PROYECTO = sys._MEIPASS
+else:
+    # Estamos corriendo como script normal
+    RAIZ_PROYECTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 sys.path.insert(0, RAIZ_PROYECTO)
+
+# ============================================
+# CONFIGURACIÓN DE DEEPFACE PARA EJECUTABLE
+# ============================================
+
+# Le decimos a DeepFace que busque los modelos en la carpeta del proyecto
+DEEPFACE_HOME = os.path.join(RAIZ_PROYECTO, ".deepface")
+os.environ['DEEPFACE_HOME'] = DEEPFACE_HOME
 
 # ============================================
 # CONFIGURACIÓN
@@ -149,15 +164,15 @@ class SistemaReconocimientoGUI:
         frame_banner_content = tk.Frame(banner, bg=COLORS['azul_oscuro'])
         frame_banner_content.pack(expand=True)
 
-        # --- LOGO (agregar esto) ---
-        logo_img = self.cargar_logo((45, 45))  # Tamaño del logo
+        # --- LOGO ---
+        logo_img = self.cargar_logo((45, 45))
         if logo_img:
             label_logo = tk.Label(
                 frame_banner_content,
                 image=logo_img,
                 bg=COLORS['azul_oscuro']
             )
-            label_logo.image = logo_img  # Guardar referencia para que no se borre
+            label_logo.image = logo_img
             label_logo.pack(side=tk.LEFT, padx=5)
         
         # Título
@@ -497,11 +512,8 @@ class SistemaReconocimientoGUI:
                     new_w = 800
                     new_h = int(new_w / aspect_ratio)
                     
-                    # === CAMBIO IMPORTANTE ===
                     # Mostrar la imagen NATURAL (sin efecto espejo)
-                    # Si quieres efecto espejo, usa cv2.flip(frame, 1)
                     frame_display = cv2.resize(frame, (new_w, new_h))
-                    # ===========================
                     
                     frame_rgb = cv2.cvtColor(frame_display, cv2.COLOR_BGR2RGB)
                     img = Image.fromarray(frame_rgb)
