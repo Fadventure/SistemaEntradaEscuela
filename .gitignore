@@ -33,3 +33,10 @@ captura_*.jpg
 # VS Code
 .vscode/
 *.code-workspace
+
+# Ejecutables (pesados)
+dist/
+build/
+*.exe
+SistemaCompleto/
+PruebaEjecutable/

@@ -1,5 +1,5 @@
 # gui_camara.py - Sistema de Reconocimiento Facial
-# Versión 2.8 - Preparado para ejecutable
+# Versión 2.9 - Con rutas absolutas para ejecutable
 
 import os
 import sys
@@ -21,23 +21,42 @@ CAMARA_INDICE = 0  # 0 = integrada, 1 o 2 = USB externa
 # CONFIGURACIÓN DE RUTAS
 # ============================================
 
-# Detectar si estamos dentro de un ejecutable (.exe) o corriendo como script
 if getattr(sys, 'frozen', False):
-    # Estamos dentro de un ejecutable empaquetado con PyInstaller
+    # Estamos dentro del .exe
     RAIZ_PROYECTO = sys._MEIPASS
+    CARPETA_DATOS = os.path.dirname(sys.executable)
 else:
-    # Estamos corriendo como script normal
+    # Estamos como script
     RAIZ_PROYECTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    CARPETA_DATOS = RAIZ_PROYECTO
 
 sys.path.insert(0, RAIZ_PROYECTO)
+
+# ============================================
+# CONFIGURACIÓN DE RUTAS DE DATOS
+# ============================================
+
+# Cambiar el directorio de trabajo a la carpeta de datos
+os.chdir(CARPETA_DATOS)
 
 # ============================================
 # CONFIGURACIÓN DE DEEPFACE PARA EJECUTABLE
 # ============================================
 
-# Le decimos a DeepFace que busque los modelos en la carpeta del proyecto
-DEEPFACE_HOME = os.path.join(RAIZ_PROYECTO, ".deepface")
-os.environ['DEEPFACE_HOME'] = DEEPFACE_HOME
+if getattr(sys, 'frozen', False):
+    DEEPFACE_HOME = RAIZ_PROYECTO
+    os.environ['DEEPFACE_HOME'] = DEEPFACE_HOME
+    
+    ruta_modelos = os.path.join(DEEPFACE_HOME, ".deepface", "weights")
+    print(f"📁 DeepFace HOME: {DEEPFACE_HOME}")
+    print(f"📁 Modelos en: {ruta_modelos}")
+    if os.path.exists(ruta_modelos):
+        print(f"✅ Modelos encontrados: {os.listdir(ruta_modelos)}")
+    else:
+        print(f"⚠️ NO se encontraron modelos en {ruta_modelos}")
+else:
+    DEEPFACE_HOME = RAIZ_PROYECTO
+    os.environ['DEEPFACE_HOME'] = DEEPFACE_HOME
 
 # ============================================
 # CONFIGURACIÓN
@@ -58,30 +77,21 @@ from base_datos.db_manager import cargar_db, registrar_ingreso
 # ============================================
 
 COLORS = {
-    # Fondo principal
-    'fondo': '#0d1117',          # Fondo general (oscuro)
-    'fondo_card': '#161b22',     # Fondo de tarjetas
-    'fondo_input': '#0d1117',    # Fondo de inputs
-    'borde': '#30363d',          # Bordes sutiles
-    
-    # Colores institucionales (adaptados a oscuro)
-    'azul_oscuro': '#0a1628',    # Banner superior
-    'azul_medio': '#1a3a6a',     # Botones principales
-    'azul_claro': '#2d6da8',     # Hover de botones
-    
-    # Textos
-    'texto': '#e6edf3',          # Texto principal (blanco)
-    'texto_secundario': '#8b949e', # Texto secundario (gris)
-    'texto_oscuro': '#0d1117',   # Texto sobre fondos claros
-    
-    # Estados
-    'verde': '#2ea043',          # Acceso concedido
-    'rojo': '#f85149',           # Acceso denegado
-    'amarillo': '#d29922',       # Advertencias
-    'azul_info': '#58a6ff',      # Información
-    
-    # Video
-    'video_bg': '#000000',       # Fondo del video (negro)
+    'fondo': '#0d1117',
+    'fondo_card': '#161b22',
+    'fondo_input': '#0d1117',
+    'borde': '#30363d',
+    'azul_oscuro': '#0a1628',
+    'azul_medio': '#1a3a6a',
+    'azul_claro': '#2d6da8',
+    'texto': '#e6edf3',
+    'texto_secundario': '#8b949e',
+    'texto_oscuro': '#0d1117',
+    'verde': '#2ea043',
+    'rojo': '#f85149',
+    'amarillo': '#d29922',
+    'azul_info': '#58a6ff',
+    'video_bg': '#000000',
 }
 
 # ============================================
@@ -107,8 +117,8 @@ class SistemaReconocimientoGUI:
         
         # Configurar grid principal
         self.root.grid_rowconfigure(0, weight=1)
-        self.root.grid_columnconfigure(0, weight=3)  # Video más grande
-        self.root.grid_columnconfigure(1, weight=1)  # Panel derecho más pequeño
+        self.root.grid_columnconfigure(0, weight=3)
+        self.root.grid_columnconfigure(1, weight=1)
         
         # Cargar clasificador de rostros
         self.face_cascade = cv2.CascadeClassifier(
@@ -160,7 +170,6 @@ class SistemaReconocimientoGUI:
         banner.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 10))
         banner.grid_propagate(False)
         
-        # Contenido del banner (centrado)
         frame_banner_content = tk.Frame(banner, bg=COLORS['azul_oscuro'])
         frame_banner_content.pack(expand=True)
 
@@ -210,10 +219,10 @@ class SistemaReconocimientoGUI:
         frame_principal = tk.Frame(self.root, bg=COLORS['fondo'])
         frame_principal.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=10, pady=5)
         frame_principal.grid_rowconfigure(0, weight=1)
-        frame_principal.grid_columnconfigure(0, weight=3)  # Video más grande
-        frame_principal.grid_columnconfigure(1, weight=1)  # Panel derecho
+        frame_principal.grid_columnconfigure(0, weight=3)
+        frame_principal.grid_columnconfigure(1, weight=1)
         
-        # ---- Columna Izquierda: Video (MÁS GRANDE) ----
+        # ---- Columna Izquierda: Video ----
         frame_video = tk.Frame(
             frame_principal,
             bg=COLORS['fondo_card'],
@@ -224,10 +233,9 @@ class SistemaReconocimientoGUI:
         frame_video.grid_rowconfigure(0, weight=1)
         frame_video.grid_columnconfigure(0, weight=1)
         
-        # Título del video
         tk.Label(
             frame_video,
-            text=" Cámara en vivo",
+            text="📹 Cámara en vivo",
             font=("Segoe UI", 11, "bold"),
             bg=COLORS['fondo_card'],
             fg=COLORS['texto'],
@@ -235,7 +243,6 @@ class SistemaReconocimientoGUI:
             pady=5
         ).grid(row=0, column=0, sticky="w")
         
-        # Label del video (ocupa el espacio principal)
         self.label_video = tk.Label(
             frame_video,
             text="🔄 Iniciando cámara...",
@@ -247,7 +254,6 @@ class SistemaReconocimientoGUI:
         self.label_video.grid_rowconfigure(0, weight=1)
         self.label_video.grid_columnconfigure(0, weight=1)
         
-        # Configurar el frame_video para que el label de video se expanda
         frame_video.grid_rowconfigure(1, weight=1)
         frame_video.grid_columnconfigure(0, weight=1)
         
@@ -259,14 +265,13 @@ class SistemaReconocimientoGUI:
             relief=tk.FLAT
         )
         frame_info.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
-        frame_info.grid_rowconfigure(0, weight=0)  # Título
-        frame_info.grid_rowconfigure(1, weight=0)  # Último reconocido
-        frame_info.grid_rowconfigure(2, weight=0)  # Separador
-        frame_info.grid_rowconfigure(3, weight=1)  # Registro (expande)
-        frame_info.grid_rowconfigure(4, weight=0)  # Botón recargar
+        frame_info.grid_rowconfigure(0, weight=0)
+        frame_info.grid_rowconfigure(1, weight=0)
+        frame_info.grid_rowconfigure(2, weight=0)
+        frame_info.grid_rowconfigure(3, weight=1)
+        frame_info.grid_rowconfigure(4, weight=0)
         frame_info.grid_columnconfigure(0, weight=1)
         
-        # Título del panel
         tk.Label(
             frame_info,
             text="📊 INFORMACIÓN",
@@ -277,7 +282,6 @@ class SistemaReconocimientoGUI:
             pady=5
         ).grid(row=0, column=0, sticky="w")
         
-        # ---- Último reconocido ----
         frame_reconocido = tk.Frame(frame_info, bg=COLORS['fondo_card'])
         frame_reconocido.grid(row=1, column=0, sticky="ew", padx=10, pady=5)
         
@@ -316,11 +320,9 @@ class SistemaReconocimientoGUI:
         )
         self.label_estado.pack(anchor="w", pady=(5, 0))
         
-        # ---- Separador ----
         separador = tk.Frame(frame_info, bg=COLORS['borde'], height=1)
         separador.grid(row=2, column=0, sticky="ew", padx=10, pady=10)
         
-        # ---- Registro de hoy ----
         tk.Label(
             frame_info,
             text="📋 REGISTRO DE INGRESOS",
@@ -344,10 +346,9 @@ class SistemaReconocimientoGUI:
         self.texto_registro.grid(row=3, column=0, sticky="nsew", padx=10, pady=(0, 5))
         self.texto_registro.config(state=tk.DISABLED)
         
-        # ---- Botón recargar ----
         btn_recargar = tk.Button(
             frame_info,
-            text=" Recargar Alumnos",
+            text="🔄 Recargar Alumnos",
             command=self.recargar_base_datos,
             font=("Segoe UI", 9, "bold"),
             bg=COLORS['azul_medio'],
@@ -367,10 +368,9 @@ class SistemaReconocimientoGUI:
         frame_controles = tk.Frame(self.root, bg=COLORS['fondo'])
         frame_controles.grid(row=2, column=0, columnspan=2, sticky="ew", padx=10, pady=10)
         
-        # Botón Capturar (Verde)
         btn_capturar = tk.Button(
             frame_controles,
-            text=" CAPTURAR (Espacio)",
+            text="📸 CAPTURAR (Espacio)",
             command=self.capturar_rostro,
             font=("Segoe UI", 10, "bold"),
             bg=COLORS['verde'],
@@ -384,7 +384,6 @@ class SistemaReconocimientoGUI:
         )
         btn_capturar.pack(side=tk.LEFT, padx=5)
         
-        # Botón Reiniciar
         btn_reiniciar = tk.Button(
             frame_controles,
             text="🔄 Reiniciar (R)",
@@ -401,7 +400,6 @@ class SistemaReconocimientoGUI:
         )
         btn_reiniciar.pack(side=tk.LEFT, padx=5)
         
-        # Botón Estado
         btn_estado = tk.Button(
             frame_controles,
             text="ℹ️ Estado",
@@ -418,7 +416,6 @@ class SistemaReconocimientoGUI:
         )
         btn_estado.pack(side=tk.LEFT, padx=5)
         
-        # Estado del sistema (a la derecha)
         self.label_sistema = tk.Label(
             frame_controles,
             text="🟢 Sistema activo",
@@ -428,7 +425,6 @@ class SistemaReconocimientoGUI:
         )
         self.label_sistema.pack(side=tk.RIGHT, padx=10)
         
-        # Botón Salir (Rojo, a la derecha)
         btn_salir = tk.Button(
             frame_controles,
             text="❌ Salir (ESC)",
@@ -445,7 +441,6 @@ class SistemaReconocimientoGUI:
         )
         btn_salir.pack(side=tk.RIGHT, padx=5)
         
-        # Atajos de teclado
         self.root.bind('<space>', lambda e: self.capturar_rostro())
         self.root.bind('<Escape>', lambda e: self.salir())
         self.root.bind('<r>', lambda e: self.reiniciar_sistema())
@@ -481,7 +476,7 @@ class SistemaReconocimientoGUI:
             if not self.cap.isOpened():
                 raise Exception(f"No se pudo acceder a la cámara {CAMARA_INDICE}")
             self.running = True
-            self.agregar_registro(f" Cámara {CAMARA_INDICE} iniciada")
+            self.agregar_registro(f"📹 Cámara {CAMARA_INDICE} iniciada")
         except Exception as e:
             self.agregar_registro(f"❌ Error: {e}")
             self.label_video.config(text="❌ No se pudo acceder a la cámara")
@@ -500,21 +495,16 @@ class SistemaReconocimientoGUI:
             return False
     
     def actualizar_video(self):
-        """Actualiza el video en tiempo real - SIN EFECTO ESPEJO"""
         if self.running and self.cap:
             try:
                 ret, frame = self.cap.read()
                 if ret and frame is not None:
                     self.frame_actual = frame.copy()
-                    # Redimensionar manteniendo proporción
                     h, w = frame.shape[:2]
                     aspect_ratio = w / h
                     new_w = 800
                     new_h = int(new_w / aspect_ratio)
-                    
-                    # Mostrar la imagen NATURAL (sin efecto espejo)
                     frame_display = cv2.resize(frame, (new_w, new_h))
-                    
                     frame_rgb = cv2.cvtColor(frame_display, cv2.COLOR_BGR2RGB)
                     img = Image.fromarray(frame_rgb)
                     img_tk = ImageTk.PhotoImage(image=img)

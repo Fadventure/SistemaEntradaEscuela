@@ -1,5 +1,5 @@
 # panel_central.py - Panel de Administración Unificado
-# Versión 3.4 - Preparado para ejecutable
+# Versión 3.5 - Con rutas absolutas para ejecutable
 
 import os
 import sys
@@ -13,29 +13,37 @@ from PIL import Image, ImageTk
 # CONFIGURACIÓN DE RUTAS
 # ============================================
 
-# Detectar si estamos dentro de un ejecutable (.exe) o corriendo como script
 if getattr(sys, 'frozen', False):
-    # Estamos dentro de un ejecutable empaquetado con PyInstaller
+    # Estamos dentro del .exe
     RAIZ_PROYECTO = sys._MEIPASS
+    CARPETA_DATOS = os.path.dirname(sys.executable)
 else:
-    # Estamos corriendo como script normal
+    # Estamos como script
     RAIZ_PROYECTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    CARPETA_DATOS = RAIZ_PROYECTO
 
 sys.path.insert(0, RAIZ_PROYECTO)
+
+# Cambiar el directorio de trabajo a la carpeta de datos
+os.chdir(CARPETA_DATOS)
 
 # ============================================
 # CONFIGURACIÓN DE DEEPFACE PARA EJECUTABLE
 # ============================================
 
-# Le decimos a DeepFace que busque los modelos en la carpeta del proyecto
-DEEPFACE_HOME = os.path.join(RAIZ_PROYECTO, ".deepface")
-os.environ['DEEPFACE_HOME'] = DEEPFACE_HOME
+if getattr(sys, 'frozen', False):
+    DEEPFACE_HOME = RAIZ_PROYECTO
+    os.environ['DEEPFACE_HOME'] = DEEPFACE_HOME
+    print(f"📁 DeepFace HOME: {DEEPFACE_HOME}")
+else:
+    DEEPFACE_HOME = RAIZ_PROYECTO
+    os.environ['DEEPFACE_HOME'] = DEEPFACE_HOME
 
 # ============================================
 # CONFIGURACIÓN
 # ============================================
 
-CARPETA_ALUMNOS = "rostros/alumnos_registrados"
+CARPETA_ALUMNOS = os.path.join(CARPETA_DATOS, "rostros", "alumnos_registrados")
 
 from deepface import DeepFace
 from base_datos.db_manager import cargar_db, guardar_db, listar_alumnos, eliminar_alumno
@@ -74,63 +82,42 @@ class PanelCentral:
         self.root.configure(bg=COLORS['fondo'])
         self.root.minsize(1000, 650)
         
-        # Variables para el registro
         self.cap = None
         self.running = False
         self.frame_actual = None
         self.foto_tomada = None
         self.ruta_foto = None
         
-        # Variables para el admin
         self.base_datos = None
-        self.lista_completa = []  # Lista completa de alumnos
-        self.lista_filtrada = []  # Lista filtrada por búsqueda
+        self.lista_completa = []
+        self.lista_filtrada = []
         
-        # Configurar grid principal
-        self.root.grid_rowconfigure(0, weight=0)  # Banner
-        self.root.grid_rowconfigure(1, weight=0)  # Barra de navegación
-        self.root.grid_rowconfigure(2, weight=1)  # Contenido
+        self.root.grid_rowconfigure(0, weight=0)
+        self.root.grid_rowconfigure(1, weight=0)
+        self.root.grid_rowconfigure(2, weight=1)
         self.root.grid_columnconfigure(0, weight=1)
         
-        # Crear widgets
         self.crear_banner()
         self.crear_navegacion()
         self.crear_contenido()
         
-        # Cargar datos del admin
         self.actualizar_lista_alumnos()
-        
-        # Iniciar cámara del registro
         self.iniciar_camara()
         self.actualizar_video()
-        
-        # Mostrar vista por defecto (Registro)
         self.mostrar_vista("registro")
     
-    # ============================================
-    # FUNCIONES DE UTILIDAD
-    # ============================================
-    
     def cargar_logo(self, tamaño=(50, 50)):
-        """Carga el logo de la escuela desde la carpeta recursos"""
         try:
             from PIL import Image
             ruta_logo = os.path.join(RAIZ_PROYECTO, "recursos", "logo_escuela.png")
-            
             if os.path.exists(ruta_logo):
                 img = Image.open(ruta_logo)
                 img = img.resize(tamaño, Image.Resampling.LANCZOS)
                 return ImageTk.PhotoImage(img)
-            else:
-                print(f"⚠️ Logo no encontrado en: {ruta_logo}")
-                return None
+            return None
         except Exception as e:
             print(f"❌ Error al cargar logo: {e}")
             return None
-    
-    # ============================================
-    # BANNER SUPERIOR
-    # ============================================
     
     def crear_banner(self):
         banner = tk.Frame(self.root, bg=COLORS['azul_oscuro'], height=60)
@@ -140,14 +127,9 @@ class PanelCentral:
         frame_banner = tk.Frame(banner, bg=COLORS['azul_oscuro'])
         frame_banner.pack(expand=True)
         
-        # Logo
         logo_img = self.cargar_logo((45, 45))
         if logo_img:
-            label_logo = tk.Label(
-                frame_banner,
-                image=logo_img,
-                bg=COLORS['azul_oscuro']
-            )
+            label_logo = tk.Label(frame_banner, image=logo_img, bg=COLORS['azul_oscuro'])
             label_logo.image = logo_img
             label_logo.pack(side=tk.LEFT, padx=5)
         
@@ -174,10 +156,6 @@ class PanelCentral:
             bg=COLORS['azul_oscuro'],
             fg=COLORS['texto_secundario']
         ).pack(side=tk.LEFT)
-    
-    # ============================================
-    # BARRA DE NAVEGACIÓN (Pestañas)
-    # ============================================
     
     def crear_navegacion(self):
         nav = tk.Frame(self.root, bg=COLORS['fondo_card'], height=40)
@@ -232,272 +210,128 @@ class PanelCentral:
         )
         btn_salir.pack(side=tk.RIGHT, padx=5)
     
-    # ============================================
-    # CONTENIDO (cambia según la vista)
-    # ============================================
-    
     def crear_contenido(self):
-        # Frame contenedor
         self.frame_contenido = tk.Frame(self.root, bg=COLORS['fondo'])
         self.frame_contenido.grid(row=2, column=0, sticky="nsew", padx=10, pady=5)
         self.frame_contenido.grid_rowconfigure(0, weight=1)
         self.frame_contenido.grid_columnconfigure(0, weight=1)
         
-        # === VISTA REGISTRO (Cámara Grande) ===
+        # === VISTA REGISTRO ===
         self.frame_registro = tk.Frame(self.frame_contenido, bg=COLORS['fondo'])
         self.frame_registro.grid(row=0, column=0, sticky="nsew")
         self.frame_registro.grid_rowconfigure(0, weight=1)
         self.frame_registro.grid_columnconfigure(0, weight=3)
         self.frame_registro.grid_columnconfigure(1, weight=1)
         
-        # ---- Video ----
-        frame_video = tk.Frame(
-            self.frame_registro,
-            bg=COLORS['fondo_card'],
-            bd=1,
-            relief=tk.FLAT
-        )
+        frame_video = tk.Frame(self.frame_registro, bg=COLORS['fondo_card'], bd=1, relief=tk.FLAT)
         frame_video.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
         frame_video.grid_rowconfigure(1, weight=1)
         frame_video.grid_columnconfigure(0, weight=1)
         
-        tk.Label(
-            frame_video,
-            text="📹 Capturar Foto",
-            font=("Segoe UI", 11, "bold"),
-            bg=COLORS['fondo_card'],
-            fg=COLORS['texto'],
-            padx=10,
-            pady=5
-        ).grid(row=0, column=0, sticky="w")
+        tk.Label(frame_video, text="📹 Capturar Foto", font=("Segoe UI", 11, "bold"),
+                 bg=COLORS['fondo_card'], fg=COLORS['texto'], padx=10, pady=5).grid(row=0, column=0, sticky="w")
         
-        self.label_video = tk.Label(
-            frame_video,
-            text="🔄 Iniciando cámara...",
-            bg=COLORS['video_bg'],
-            fg=COLORS['texto_secundario'],
-            font=("Segoe UI", 14)
-        )
+        self.label_video = tk.Label(frame_video, text="🔄 Iniciando cámara...",
+                                     bg=COLORS['video_bg'], fg=COLORS['texto_secundario'], font=("Segoe UI", 14))
         self.label_video.grid(row=1, column=0, sticky="nsew", padx=8, pady=(0, 8))
         
-        # ---- Datos del registro ----
-        frame_datos = tk.Frame(
-            self.frame_registro,
-            bg=COLORS['fondo_card'],
-            bd=1,
-            relief=tk.FLAT
-        )
+        frame_datos = tk.Frame(self.frame_registro, bg=COLORS['fondo_card'], bd=1, relief=tk.FLAT)
         frame_datos.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
         frame_datos.grid_rowconfigure(5, weight=1)
         frame_datos.grid_columnconfigure(0, weight=1)
         
-        tk.Label(
-            frame_datos,
-            text="📋 DATOS DEL ALUMNO",
-            font=("Segoe UI", 11, "bold"),
-            bg=COLORS['fondo_card'],
-            fg=COLORS['texto'],
-            padx=10,
-            pady=5
-        ).grid(row=0, column=0, sticky="w")
+        tk.Label(frame_datos, text="📋 DATOS DEL ALUMNO", font=("Segoe UI", 11, "bold"),
+                 bg=COLORS['fondo_card'], fg=COLORS['texto'], padx=10, pady=5).grid(row=0, column=0, sticky="w")
         
-        tk.Label(
-            frame_datos,
-            text="👤 Nombre:",
-            font=("Segoe UI", 10),
-            bg=COLORS['fondo_card'],
-            fg=COLORS['texto_secundario']
-        ).grid(row=1, column=0, sticky="w", padx=10, pady=(10, 2))
+        tk.Label(frame_datos, text="👤 Nombre:", font=("Segoe UI", 10),
+                 bg=COLORS['fondo_card'], fg=COLORS['texto_secundario']).grid(row=1, column=0, sticky="w", padx=10, pady=(10, 2))
         
-        self.entry_nombre = tk.Entry(
-            frame_datos,
-            font=("Segoe UI", 12),
-            bg=COLORS['fondo_input'],
-            fg=COLORS['texto'],
-            insertbackground=COLORS['texto'],
-            relief=tk.FLAT,
-            bd=1,
-            highlightbackground=COLORS['borde'],
-            highlightcolor=COLORS['azul_claro'],
-            highlightthickness=1
-        )
+        self.entry_nombre = tk.Entry(frame_datos, font=("Segoe UI", 12), bg=COLORS['fondo_input'],
+                                      fg=COLORS['texto'], insertbackground=COLORS['texto'], relief=tk.FLAT, bd=1,
+                                      highlightbackground=COLORS['borde'], highlightcolor=COLORS['azul_claro'],
+                                      highlightthickness=1)
         self.entry_nombre.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 5))
         
-        tk.Label(
-            frame_datos,
-            text="📚 Curso:",
-            font=("Segoe UI", 10),
-            bg=COLORS['fondo_card'],
-            fg=COLORS['texto_secundario']
-        ).grid(row=3, column=0, sticky="w", padx=10, pady=(10, 2))
+        tk.Label(frame_datos, text="📚 Curso:", font=("Segoe UI", 10),
+                 bg=COLORS['fondo_card'], fg=COLORS['texto_secundario']).grid(row=3, column=0, sticky="w", padx=10, pady=(10, 2))
         
-        self.entry_curso = tk.Entry(
-            frame_datos,
-            font=("Segoe UI", 12),
-            bg=COLORS['fondo_input'],
-            fg=COLORS['texto'],
-            insertbackground=COLORS['texto'],
-            relief=tk.FLAT,
-            bd=1,
-            highlightbackground=COLORS['borde'],
-            highlightcolor=COLORS['azul_claro'],
-            highlightthickness=1
-        )
+        self.entry_curso = tk.Entry(frame_datos, font=("Segoe UI", 12), bg=COLORS['fondo_input'],
+                                     fg=COLORS['texto'], insertbackground=COLORS['texto'], relief=tk.FLAT, bd=1,
+                                     highlightbackground=COLORS['borde'], highlightcolor=COLORS['azul_claro'],
+                                     highlightthickness=1)
         self.entry_curso.grid(row=4, column=0, sticky="ew", padx=10, pady=(0, 5))
         self.entry_curso.insert(0, "4°A")
         
-        tk.Label(
-            frame_datos,
-            text="📸 Foto:",
-            font=("Segoe UI", 10, "bold"),
-            bg=COLORS['fondo_card'],
-            fg=COLORS['texto_secundario']
-        ).grid(row=5, column=0, sticky="w", padx=10, pady=(10, 2))
+        tk.Label(frame_datos, text="📸 Foto:", font=("Segoe UI", 10, "bold"),
+                 bg=COLORS['fondo_card'], fg=COLORS['texto_secundario']).grid(row=5, column=0, sticky="w", padx=10, pady=(10, 2))
         
-        self.label_foto_tomada = tk.Label(
-            frame_datos,
-            text="(Sin foto)",
-            bg=COLORS['fondo_input'],
-            fg=COLORS['texto_secundario'],
-            font=("Segoe UI", 10),
-            relief=tk.FLAT,
-            bd=1,
-            highlightbackground=COLORS['borde'],
-            highlightthickness=1
-        )
+        self.label_foto_tomada = tk.Label(frame_datos, text="(Sin foto)", bg=COLORS['fondo_input'],
+                                           fg=COLORS['texto_secundario'], font=("Segoe UI", 10), relief=tk.FLAT, bd=1,
+                                           highlightbackground=COLORS['borde'], highlightthickness=1)
         self.label_foto_tomada.grid(row=5, column=0, sticky="nsew", padx=10, pady=(0, 5))
         
         frame_botones = tk.Frame(frame_datos, bg=COLORS['fondo_card'])
         frame_botones.grid(row=6, column=0, sticky="ew", padx=10, pady=10)
         
-        btn_tomar = tk.Button(
-            frame_botones,
-            text="📸 Tomar Foto",
-            command=self.tomar_foto,
-            font=("Segoe UI", 10, "bold"),
-            bg=COLORS['verde'],
-            fg=COLORS['texto_oscuro'],
-            activebackground="#3fb950",
-            activeforeground=COLORS['texto_oscuro'],
-            relief=tk.FLAT,
-            cursor="hand2",
-            padx=15,
-            pady=8
-        )
+        btn_tomar = tk.Button(frame_botones, text="📸 Tomar Foto", command=self.tomar_foto,
+                              font=("Segoe UI", 10, "bold"), bg=COLORS['verde'], fg=COLORS['texto_oscuro'],
+                              activebackground="#3fb950", activeforeground=COLORS['texto_oscuro'],
+                              relief=tk.FLAT, cursor="hand2", padx=15, pady=8)
         btn_tomar.pack(side=tk.LEFT, padx=5)
         
-        btn_registrar = tk.Button(
-            frame_botones,
-            text="💾 Registrar",
-            command=self.registrar_alumno,
-            font=("Segoe UI", 10, "bold"),
-            bg=COLORS['azul_medio'],
-            fg=COLORS['texto'],
-            activebackground=COLORS['azul_claro'],
-            activeforeground=COLORS['texto'],
-            relief=tk.FLAT,
-            cursor="hand2",
-            padx=15,
-            pady=8
-        )
+        btn_registrar = tk.Button(frame_botones, text="💾 Registrar", command=self.registrar_alumno,
+                                   font=("Segoe UI", 10, "bold"), bg=COLORS['azul_medio'], fg=COLORS['texto'],
+                                   activebackground=COLORS['azul_claro'], activeforeground=COLORS['texto'],
+                                   relief=tk.FLAT, cursor="hand2", padx=15, pady=8)
         btn_registrar.pack(side=tk.LEFT, padx=5)
         
-        self.label_estado_registro = tk.Label(
-            frame_datos,
-            text="✅ Listo para registrar",
-            font=("Segoe UI", 9),
-            bg=COLORS['fondo_card'],
-            fg=COLORS['verde']
-        )
+        self.label_estado_registro = tk.Label(frame_datos, text="✅ Listo para registrar",
+                                               font=("Segoe UI", 9), bg=COLORS['fondo_card'], fg=COLORS['verde'])
         self.label_estado_registro.grid(row=7, column=0, sticky="w", padx=10, pady=(0, 5))
         
-        # === VISTA ADMIN (MEJORADA) ===
+        # === VISTA ADMIN ===
         self.frame_admin = tk.Frame(self.frame_contenido, bg=COLORS['fondo'])
         self.frame_admin.grid(row=0, column=0, sticky="nsew")
-        self.frame_admin.grid_rowconfigure(0, weight=0)  # Botones
-        self.frame_admin.grid_rowconfigure(1, weight=0)  # Buscador
-        self.frame_admin.grid_rowconfigure(2, weight=0)  # Título
-        self.frame_admin.grid_rowconfigure(3, weight=1)  # Lista (expande)
-        self.frame_admin.grid_rowconfigure(4, weight=0)  # Estado
+        self.frame_admin.grid_rowconfigure(0, weight=0)
+        self.frame_admin.grid_rowconfigure(1, weight=0)
+        self.frame_admin.grid_rowconfigure(2, weight=0)
+        self.frame_admin.grid_rowconfigure(3, weight=1)
+        self.frame_admin.grid_rowconfigure(4, weight=0)
         self.frame_admin.grid_columnconfigure(0, weight=1)
         
-        # ---- Botones del admin ----
         frame_admin_botones = tk.Frame(self.frame_admin, bg=COLORS['fondo'])
         frame_admin_botones.grid(row=0, column=0, sticky="ew", pady=(0, 10))
         
-        btn_eliminar = tk.Button(
-            frame_admin_botones,
-            text="🗑️ Eliminar Alumno",
-            command=self.eliminar_alumno,
-            font=("Segoe UI", 10, "bold"),
-            bg=COLORS['rojo'],
-            fg=COLORS['texto'],
-            activebackground="#da3633",
-            activeforeground=COLORS['texto'],
-            relief=tk.FLAT,
-            cursor="hand2",
-            padx=15,
-            pady=8
-        )
+        btn_eliminar = tk.Button(frame_admin_botones, text="🗑️ Eliminar Alumno", command=self.eliminar_alumno,
+                                  font=("Segoe UI", 10, "bold"), bg=COLORS['rojo'], fg=COLORS['texto'],
+                                  activebackground="#da3633", activeforeground=COLORS['texto'],
+                                  relief=tk.FLAT, cursor="hand2", padx=15, pady=8)
         btn_eliminar.pack(side=tk.LEFT, padx=5)
         
-        btn_actualizar = tk.Button(
-            frame_admin_botones,
-            text="🔄 Actualizar Lista",
-            command=self.actualizar_lista_alumnos,
-            font=("Segoe UI", 10, "bold"),
-            bg=COLORS['azul_medio'],
-            fg=COLORS['texto'],
-            activebackground=COLORS['azul_claro'],
-            activeforeground=COLORS['texto'],
-            relief=tk.FLAT,
-            cursor="hand2",
-            padx=15,
-            pady=8
-        )
+        btn_actualizar = tk.Button(frame_admin_botones, text="🔄 Actualizar Lista", command=self.actualizar_lista_alumnos,
+                                    font=("Segoe UI", 10, "bold"), bg=COLORS['azul_medio'], fg=COLORS['texto'],
+                                    activebackground=COLORS['azul_claro'], activeforeground=COLORS['texto'],
+                                    relief=tk.FLAT, cursor="hand2", padx=15, pady=8)
         btn_actualizar.pack(side=tk.LEFT, padx=5)
         
-        # ---- BUSCADOR ----
         frame_buscador = tk.Frame(self.frame_admin, bg=COLORS['fondo'])
         frame_buscador.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
         frame_buscador.grid_columnconfigure(0, weight=0)
         frame_buscador.grid_columnconfigure(1, weight=1)
         
-        tk.Label(
-            frame_buscador,
-            text="🔍 Buscar:",
-            font=("Segoe UI", 10),
-            bg=COLORS['fondo'],
-            fg=COLORS['texto_secundario']
-        ).grid(row=0, column=0, sticky="w", padx=(0, 10))
+        tk.Label(frame_buscador, text="🔍 Buscar:", font=("Segoe UI", 10),
+                 bg=COLORS['fondo'], fg=COLORS['texto_secundario']).grid(row=0, column=0, sticky="w", padx=(0, 10))
         
-        self.entry_buscador = tk.Entry(
-            frame_buscador,
-            font=("Segoe UI", 11),
-            bg=COLORS['fondo_input'],
-            fg=COLORS['texto'],
-            insertbackground=COLORS['texto'],
-            relief=tk.FLAT,
-            bd=1,
-            highlightbackground=COLORS['borde'],
-            highlightcolor=COLORS['azul_claro'],
-            highlightthickness=1
-        )
+        self.entry_buscador = tk.Entry(frame_buscador, font=("Segoe UI", 11), bg=COLORS['fondo_input'],
+                                        fg=COLORS['texto'], insertbackground=COLORS['texto'], relief=tk.FLAT, bd=1,
+                                        highlightbackground=COLORS['borde'], highlightcolor=COLORS['azul_claro'],
+                                        highlightthickness=1)
         self.entry_buscador.grid(row=0, column=1, sticky="ew")
-        
-        # Evento para filtrar mientras se escribe
         self.entry_buscador.bind('<KeyRelease>', self.filtrar_lista)
         
-        # ---- Título de la lista ----
-        tk.Label(
-            self.frame_admin,
-            text="📋 Alumnos Registrados:",
-            font=("Segoe UI", 10, "bold"),
-            bg=COLORS['fondo'],
-            fg=COLORS['texto_secundario']
-        ).grid(row=2, column=0, sticky="w", padx=10, pady=(0, 5))
+        tk.Label(self.frame_admin, text="📋 Alumnos Registrados:", font=("Segoe UI", 10, "bold"),
+                 bg=COLORS['fondo'], fg=COLORS['texto_secundario']).grid(row=2, column=0, sticky="w", padx=10, pady=(0, 5))
         
-        # ---- Lista de alumnos ----
         frame_lista = tk.Frame(self.frame_admin, bg=COLORS['fondo'])
         frame_lista.grid(row=3, column=0, sticky="nsew", padx=10)
         frame_lista.grid_rowconfigure(0, weight=1)
@@ -506,36 +340,16 @@ class PanelCentral:
         scrollbar = tk.Scrollbar(frame_lista, bg=COLORS['fondo_card'])
         scrollbar.grid(row=0, column=1, sticky="ns")
         
-        self.lista_alumnos = tk.Listbox(
-            frame_lista,
-            yscrollcommand=scrollbar.set,
-            font=("Consolas", 10),
-            bg=COLORS['fondo_input'],
-            fg=COLORS['texto'],
-            selectmode=tk.SINGLE,
-            relief=tk.FLAT,
-            bd=1,
-            highlightbackground=COLORS['borde'],
-            highlightcolor=COLORS['azul_claro'],
-            highlightthickness=1,
-            activestyle='none'
-        )
+        self.lista_alumnos = tk.Listbox(frame_lista, yscrollcommand=scrollbar.set, font=("Consolas", 10),
+                                         bg=COLORS['fondo_input'], fg=COLORS['texto'], selectmode=tk.SINGLE,
+                                         relief=tk.FLAT, bd=1, highlightbackground=COLORS['borde'],
+                                         highlightcolor=COLORS['azul_claro'], highlightthickness=1, activestyle='none')
         self.lista_alumnos.grid(row=0, column=0, sticky="nsew")
         scrollbar.config(command=self.lista_alumnos.yview)
         
-        # ---- Estado ----
-        self.label_estado_admin = tk.Label(
-            self.frame_admin,
-            text="✅ Sistema listo",
-            font=("Segoe UI", 9),
-            bg=COLORS['fondo'],
-            fg=COLORS['verde']
-        )
+        self.label_estado_admin = tk.Label(self.frame_admin, text="✅ Sistema listo",
+                                            font=("Segoe UI", 9), bg=COLORS['fondo'], fg=COLORS['verde'])
         self.label_estado_admin.grid(row=4, column=0, sticky="w", padx=10, pady=10)
-    
-    # ============================================
-    # NAVEGACIÓN
-    # ============================================
     
     def mostrar_vista(self, vista):
         if vista == "registro":
@@ -549,10 +363,6 @@ class PanelCentral:
             self.btn_registro.config(bg=COLORS['fondo_card'], fg=COLORS['texto_secundario'])
             self.root.title("👨‍🏫 Gestionar Alumnos - E.E.S.T. N°2")
             self.actualizar_lista_alumnos()
-    
-    # ============================================
-    # FUNCIONES DEL REGISTRO
-    # ============================================
     
     def iniciar_camara(self):
         try:
@@ -659,12 +469,7 @@ class PanelCentral:
             messagebox.showerror("❌ Error", f"Error al registrar:\n{e}")
             self.label_estado_registro.config(text=f"❌ Error: {e}", fg=COLORS['rojo'])
     
-    # ============================================
-    # FUNCIONES DEL ADMIN (MEJORADAS)
-    # ============================================
-    
     def actualizar_lista_alumnos(self):
-        """Carga la lista completa de alumnos y la muestra"""
         try:
             self.lista_completa = sorted(listar_alumnos())
             self.lista_filtrada = self.lista_completa.copy()
@@ -687,7 +492,6 @@ class PanelCentral:
             )
     
     def filtrar_lista(self, event=None):
-        """Filtra la lista de alumnos según el texto del buscador"""
         texto = self.entry_buscador.get().strip().lower()
         
         if texto == "":
@@ -701,7 +505,6 @@ class PanelCentral:
         self.mostrar_lista_filtrada()
     
     def mostrar_lista_filtrada(self):
-        """Muestra la lista filtrada en el Listbox"""
         self.lista_alumnos.delete(0, tk.END)
         
         if self.lista_filtrada:
@@ -763,10 +566,6 @@ class PanelCentral:
                     )
             except Exception as e:
                 messagebox.showerror("❌ Error", f"Error al eliminar: {e}")
-    
-    # ============================================
-    # SALIR
-    # ============================================
     
     def salir(self):
         self.running = False
