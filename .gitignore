@@ -40,3 +40,6 @@ build/
 *.exe
 SistemaCompleto/
 PruebaEjecutable/
+
+# Logs (privacidad)
+logs/
