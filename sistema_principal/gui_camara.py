@@ -15,7 +15,25 @@ import numpy as np
 # CONFIGURACIÓN DE CÁMARA
 # ============================================
 
-CAMARA_INDICE = 0  # 0 = integrada, 1 o 2 = USB externa
+# La cámara puede estar en el índice 0, 1 o 2.
+# Probamos varios para encontrar la que funcione.
+CAMARA_INDICE = None # Se detectará automáticamente
+
+def detectar_camara():
+    """Prueba diferentes índices para encontrar una cámara funcional."""
+    for indice in [0, 1, 2]:
+        cap = cv2.VideoCapture(indice, cv2.CAP_DSHOW)
+        if cap.isOpened():
+            ret, frame = cap.read()
+            if ret and frame is not None:
+                cap.release()
+                print(f"✅ Cámara detectada en el índice {indice}")
+                return indice
+        cap.release()
+    return 0 # Por defecto, intentar con 0 si no se encuentra ninguna
+
+# Detectar la cámara antes de usarla
+CAMARA_INDICE = detectar_camara()
 
 # ============================================
 # CONFIGURACIÓN DE RUTAS
@@ -470,16 +488,16 @@ class SistemaReconocimientoGUI:
             self.agregar_registro(f"✅ Recargada. {len(self.base_datos)} alumnos.")
         self.mostrar_estado()
     
-    def iniciar_camara(self):
-        try:
-            self.cap = cv2.VideoCapture(CAMARA_INDICE)
-            if not self.cap.isOpened():
-                raise Exception(f"No se pudo acceder a la cámara {CAMARA_INDICE}")
-            self.running = True
-            self.agregar_registro(f"📹 Cámara {CAMARA_INDICE} iniciada")
-        except Exception as e:
-            self.agregar_registro(f"❌ Error: {e}")
-            self.label_video.config(text="❌ No se pudo acceder a la cámara")
+def iniciar_camara(self):
+    try:
+        self.cap = cv2.VideoCapture(CAMARA_INDICE, cv2.CAP_DSHOW)
+        if not self.cap.isOpened():
+            raise Exception(f"No se pudo acceder a la cámara en el índice {CAMARA_INDICE}")
+        self.running = True
+        self.agregar_registro(f"📹 Cámara {CAMARA_INDICE} iniciada")
+    except Exception as e:
+        self.agregar_registro(f"❌ Error: {e}")
+        self.label_video.config(text="❌ No se pudo acceder a la cámara")
     
     def verificar_camara_activa(self):
         if not self.running or self.cap is None:

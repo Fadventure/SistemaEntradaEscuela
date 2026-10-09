@@ -366,13 +366,14 @@ class PanelCentral:
     
     def iniciar_camara(self):
         try:
-            self.cap = cv2.VideoCapture(0)
+            self.cap = cv2.VideoCapture(CAMARA_INDICE, cv2.CAP_DSHOW)
             if not self.cap.isOpened():
-                raise Exception("No se pudo acceder a la cámara")
+                raise Exception(f"No se pudo acceder a la cámara en el índice {CAMARA_INDICE}")
             self.running = True
-            self.label_estado_registro.config(text="✅ Cámara iniciada", fg=COLORS['verde'])
+            self.agregar_registro(f"📹 Cámara {CAMARA_INDICE} iniciada")
         except Exception as e:
-            self.label_estado_registro.config(text=f"❌ Error: {e}", fg=COLORS['rojo'])
+            self.agregar_registro(f"❌ Error: {e}")
+            self.label_video.config(text="❌ No se pudo acceder a la cámara")
     
     def actualizar_video(self):
         if self.running and self.cap:
