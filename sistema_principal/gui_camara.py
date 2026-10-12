@@ -488,16 +488,16 @@ class SistemaReconocimientoGUI:
             self.agregar_registro(f"✅ Recargada. {len(self.base_datos)} alumnos.")
         self.mostrar_estado()
     
-def iniciar_camara(self):
-    try:
-        self.cap = cv2.VideoCapture(CAMARA_INDICE, cv2.CAP_DSHOW)
-        if not self.cap.isOpened():
-            raise Exception(f"No se pudo acceder a la cámara en el índice {CAMARA_INDICE}")
-        self.running = True
-        self.agregar_registro(f"📹 Cámara {CAMARA_INDICE} iniciada")
-    except Exception as e:
-        self.agregar_registro(f"❌ Error: {e}")
-        self.label_video.config(text="❌ No se pudo acceder a la cámara")
+    def iniciar_camara(self):
+        try:
+            self.cap = cv2.VideoCapture(CAMARA_INDICE, cv2.CAP_DSHOW)
+            if not self.cap.isOpened():
+                raise Exception(f"No se pudo acceder a la cámara en el índice {CAMARA_INDICE}")
+            self.running = True
+            self.agregar_registro(f"📹 Cámara {CAMARA_INDICE} iniciada")
+        except Exception as e:
+            self.agregar_registro(f"❌ Error: {e}")
+            self.label_video.config(text="❌ No se pudo acceder a la cámara")
     
     def verificar_camara_activa(self):
         if not self.running or self.cap is None:

@@ -1,5 +1,5 @@
 # panel_central.py - Panel de Administración Unificado
-# Versión 3.5 - Con rutas absolutas para ejecutable
+# Versión 3.6 - Corregido para ejecutable
 
 import os
 import sys
@@ -38,6 +38,26 @@ if getattr(sys, 'frozen', False):
 else:
     DEEPFACE_HOME = RAIZ_PROYECTO
     os.environ['DEEPFACE_HOME'] = DEEPFACE_HOME
+
+# ============================================
+# CONFIGURACIÓN DE CÁMARA (DETECCIÓN AUTOMÁTICA)
+# ============================================
+
+def detectar_camara():
+    """Prueba diferentes índices para encontrar una cámara funcional."""
+    for indice in [0, 1, 2]:
+        cap = cv2.VideoCapture(indice, cv2.CAP_DSHOW)
+        if cap.isOpened():
+            ret, frame = cap.read()
+            if ret and frame is not None:
+                cap.release()
+                print(f"✅ Cámara detectada en el índice {indice}")
+                return indice
+        cap.release()
+    print("⚠️ No se detectó ninguna cámara, usando índice 0 por defecto")
+    return 0
+
+CAMARA_INDICE = detectar_camara()
 
 # ============================================
 # CONFIGURACIÓN
@@ -370,10 +390,9 @@ class PanelCentral:
             if not self.cap.isOpened():
                 raise Exception(f"No se pudo acceder a la cámara en el índice {CAMARA_INDICE}")
             self.running = True
-            self.agregar_registro(f"📹 Cámara {CAMARA_INDICE} iniciada")
+            self.label_estado_registro.config(text=f"✅ Cámara {CAMARA_INDICE} iniciada", fg=COLORS['verde'])
         except Exception as e:
-            self.agregar_registro(f"❌ Error: {e}")
-            self.label_video.config(text="❌ No se pudo acceder a la cámara")
+            self.label_estado_registro.config(text=f"❌ Error: {e}", fg=COLORS['rojo'])
     
     def actualizar_video(self):
         if self.running and self.cap:
